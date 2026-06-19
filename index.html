@@ -237,7 +237,7 @@ input[type=file]{display:none}
   </div>
   <div style="margin-top:auto;padding:12px 14px 14px;border-top:1px solid rgba(0,0,0,0.08);font-size:9px;color:#999;line-height:1.5">
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">v.2026.06.19-13:30</div>
+    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">v.2026.06.19-14:30</div>
   </div>
 </aside>
 
@@ -578,6 +578,14 @@ input[type=file]{display:none}
 #myal-tool .notice-adj{width:22px;height:22px;border:1.5px solid #fff;background:#fff !important;color:#000 !important;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 #myal-tool .notice-adj:hover{background:#ddd !important}
 #myal-tool .notice-day-label{font-size:10px;color:#8888cc}
+/* Resigned / Last Working Day cell (light red, priority when present) */
+#myal-tool .lwd-cell{background:#fde8e8;display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-left:0.5px solid var(--color-border-tertiary)}
+#myal-tool .lwd-cell label{font-size:10px;color:#9b2c2c;font-weight:600}
+#myal-tool .lwd-controls{display:flex;align-items:center;gap:5px}
+#myal-tool .lwd-adj{width:22px;height:22px;border:1.5px solid #c0392b;background:#fff !important;color:#c0392b !important;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+#myal-tool .lwd-adj:hover{background:#fbd5d5 !important}
+#myal-tool .lwd-day-label{font-size:10px;color:#c0392b}
+#myal-tool .name-row-3col{display:grid;grid-template-columns:1fr 1fr 1fr;border:0.5px solid var(--color-border-tertiary);border-radius:4px;margin-bottom:6px;overflow:hidden}
 
 #myal-tool .emp-input-row{display:flex;align-items:center;border:0.5px solid var(--color-border-tertiary);border-radius:4px;background:var(--color-background-primary);overflow:hidden}
 #myal-tool .emp-input-row:focus-within{border-color:#1a56db}
@@ -750,7 +758,7 @@ input[type=file]{display:none}
         </div>
       </div>
     </div>
-    <!-- Has resign: name + Actual Notice End -->
+    <!-- Has resign: name + Actual Notice End (+ Resigned/Last Working Day when present) -->
     <div id="nameRowWithResign" class="name-row" style="display:none">
       <div class="name-cell">
         <label style="font-size:10px;color:var(--color-text-secondary)">Employee's Name</label>
@@ -767,6 +775,15 @@ input[type=file]{display:none}
           <button class="notice-adj" onclick="adjustNoticeEnd(1)">+</button>
         </div>
         <div id="noticeEndDay" class="notice-day-label"></div>
+      </div>
+      <div class="lwd-cell" id="lwdCell" style="display:none">
+        <label>Resigned / Last Working Day</label>
+        <div class="lwd-controls">
+          <button class="lwd-adj" onclick="adjustLwd(-1)">&#8722;</button>
+          <input type="date" id="lwdInput" style="border:none;background:transparent;font-size:12px;font-weight:600;color:#c0392b;outline:none;flex:1;min-width:0" oninput="onLwdChange()">
+          <button class="lwd-adj" onclick="adjustLwd(1)">+</button>
+        </div>
+        <div id="lwdDay" class="lwd-day-label"></div>
       </div>
     </div>
 
@@ -891,25 +908,30 @@ function syncHREmployees(){
       }
       // Group status: active (UP/CF) if active in any company; else use latest separation
       const anyActive = blocks.length ? blocks.some(b=>!['R','TM'].includes(b.confirmStatus)) : !['R','TM'].includes(e.confirmStatus);
-      let status, resignDate='';
+      let status, resignDate='', lastWorkingDay='';
       if(anyActive){
         // Prefer CF if confirmed anywhere, else UP
         const anyCF = blocks.length ? blocks.some(b=>b.confirmStatus==='CF') : e.confirmStatus==='CF';
         status = anyCF ? 'CF' : 'UP';
       } else if(blocks.length){
-        // Fully exited — latest separation date
-        const seps=blocks.map(b=>b.resignedDate||b.resignLetterDate).filter(Boolean);
-        resignDate = seps.length ? seps.map(d=>new Date(d)).sort((a,b)=>b-a)[0].toISOString().split('T')[0] : '';
+        // Fully exited — prefer letter date for the calculator's "Resignation Letter Date" field
+        const letts=blocks.map(b=>b.resignLetterDate).filter(Boolean);
+        const lwds=blocks.map(b=>b.resignedDate).filter(Boolean);
+        resignDate = letts.length ? letts.map(d=>new Date(d)).sort((a,b)=>b-a)[0].toISOString().split('T')[0]
+                   : (lwds.length ? lwds.map(d=>new Date(d)).sort((a,b)=>b-a)[0].toISOString().split('T')[0] : '');
+        lastWorkingDay = lwds.length ? lwds.map(d=>new Date(d)).sort((a,b)=>b-a)[0].toISOString().split('T')[0] : '';
         status = blocks.some(b=>b.confirmStatus==='TM') ? 'TM' : 'R';
       } else {
         status = ({CF:'CF',UP:'UP',R:'R',TM:'TM'}[e.confirmStatus]||'UP');
-        resignDate = e.resignedDate||e.resignLetterDate||'';
+        resignDate = e.resignLetterDate||e.resignedDate||'';
+        lastWorkingDay = e.resignedDate||'';
       }
       return {
         name: e.name||'',
         joinDate,
         confirmDate: (status==='CF'&&joinDate)?joinDate:'',
         resignDate,
+        lastWorkingDay,
         type: ({FT:'FT',PT:'PT',TMP:'TPR',INT:'INT'}[ (blocks[0]&&blocks[0].empType)||e.empType ]||'FT'),
         status,
         dob: e.dob||'',
@@ -948,6 +970,37 @@ function getResignDate(){return document.getElementById('resignDateA').value||do
 function syncJoin(){const v=document.getElementById('joinDateA').value||document.getElementById('joinDateB').value;document.getElementById('joinDateA').value=v;document.getElementById('joinDateB').value=v;}
 function syncResign(){const v=document.getElementById('resignDateA').value||document.getElementById('resignDateB').value;document.getElementById('resignDateA').value=v;document.getElementById('resignDateB').value=v;}
 
+// ── Resigned / Last Working Day (priority end date when present) ──
+function getLastWorkingDay(){ return document.getElementById('lwdInput').value||''; }
+function setLastWorkingDay(v){
+  const cell=document.getElementById('lwdCell');
+  const inp=document.getElementById('lwdInput');
+  inp.value=v||'';
+  const row=document.getElementById('nameRowWithResign');
+  if(v){
+    cell.style.display='flex';
+    if(row){ row.classList.remove('name-row'); row.classList.add('name-row-3col'); }
+    const d=new Date(v); const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    document.getElementById('lwdDay').textContent=isNaN(d)?'':days[d.getDay()];
+  } else {
+    cell.style.display='none';
+    if(row){ row.classList.remove('name-row-3col'); row.classList.add('name-row'); }
+    document.getElementById('lwdDay').textContent='';
+  }
+}
+function onLwdChange(){
+  const v=getLastWorkingDay();
+  const d=new Date(v); const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  document.getElementById('lwdDay').textContent=(v&&!isNaN(d))?days[d.getDay()]:'';
+  onDatesChange();
+}
+function adjustLwd(delta){
+  const v=getLastWorkingDay(); if(!v)return;
+  const d=new Date(v); d.setDate(d.getDate()+delta);
+  document.getElementById('lwdInput').value=toYMD(d);
+  onLwdChange();
+}
+
 // ── Mode switching ─────────────────────────────────────
 // NO resignation: show 2-col input row, ref date row, name only
 // HAS resignation: show 3-col input row, name + notice end
@@ -960,6 +1013,7 @@ function updateMode(){
   document.getElementById('nameRowWithResign').style.display=hasResign?'flex':'none';
   if(!hasResign){
     const ri=document.getElementById('refDate');if(!ri.value)ri.value=endOfYearYMD();
+    setLastWorkingDay(''); // no resignation → no last working day box
   }
 }
 
@@ -969,6 +1023,9 @@ function updateMode(){
 function getCalcEndDate(){
   const hasResign=!!getResignDate();
   if(hasResign){
+    // Priority: actual last working day (if filled) overrides the computed notice end
+    const lwd=getLastWorkingDay();
+    if(lwd) return new Date(lwd);
     const v=document.getElementById('noticeEndInput').value;
     return v?new Date(v):null;
   } else {
@@ -980,7 +1037,8 @@ function getCalcEndDate(){
 function getCyWindow(){
   if(cyWindowStart&&cyWindowEnd) return{start:new Date(cyWindowStart),end:new Date(cyWindowEnd),label:`${dateStr(cyWindowStart)} – ${dateStr(cyWindowEnd)}`};
   const hasResign=!!getResignDate();
-  const baseDate=hasResign?new Date(getResignDate()):getCalcEndDate();
+  const lwd=getLastWorkingDay();
+  const baseDate=hasResign?(lwd?new Date(lwd):new Date(getResignDate())):getCalcEndDate();
   const y=baseDate.getFullYear();
   return{start:new Date(y,0,1),end:new Date(y,11,31),label:String(y)};
 }
@@ -1086,6 +1144,7 @@ function pickEmpByIdx(i){
   if(e.joinDate){document.getElementById('joinDateA').value=e.joinDate;document.getElementById('joinDateB').value=e.joinDate;}
   document.getElementById('resignDateA').value=e.resignDate||'';
   document.getElementById('resignDateB').value=e.resignDate||'';
+  setLastWorkingDay(e.lastWorkingDay||'');
   cyWindowStart=null;cyWindowEnd=null;updateRefRangeLabel();
   onDatesChange();closePortal();
 }
