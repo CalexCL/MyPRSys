@@ -181,7 +181,6 @@ tr.clickable:hover td{background:#f8f8f6}
 input[type=file]{display:none}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://apis.google.com/js/api.js" async defer></script>
 </head>
 <body>
 
@@ -238,7 +237,7 @@ input[type=file]{display:none}
   </div>
   <div style="margin-top:auto;padding:12px 14px 14px;border-top:1px solid rgba(0,0,0,0.08);font-size:9px;color:#999;line-height:1.5">
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">v.2026.06.19-12:00</div>
+    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">v.2026.06.19-13:00</div>
   </div>
 </aside>
 
@@ -1355,7 +1354,7 @@ window.closePortal = closePortal;                 // ← safety
       </div>
       <div class="fg-item"><label>Date Joined</label><input type="date" id="add-joined"></div>
       <div class="fg-item"><label>Basic Salary (RM)</label><input type="number" id="add-salary" placeholder="3000" min="0"></div>
-      <div class="fg-item"><label>Company</label><input type="text" id="add-company" value="MEG (Megah Enterprise Group)"></div>
+      <div class="fg-item"><label>Company</label><input type="text" id="add-company" value="MEG (Myeden Group)"></div>
       <div class="fg-item span2">
         <label>Auto-generate Employee ID?</label>
         <div class="flex gap8 aic mt4">
@@ -1966,7 +1965,7 @@ function mkEmployee(opts){
     address:'', contacts:[{cc:'+60 (Malaysia)',no:''}], email:'',
     maritalStatus:'Single', spouseName:'',
     empId, autoId:opts.autoId||'Y',
-    company:opts.company||'MEG (Megah Enterprise Group)',
+    company:opts.company||'MEG (Myeden Group)',
     // ── Flat employment fields kept for backward-compat (mirror primary block) ──
     dept:opts.dept||'', jobTitle:opts.jobTitle||'',
     empType:opts.empType||'FT',
@@ -4784,7 +4783,7 @@ function openAddModal(){
   document.getElementById('add-jobtitle').value='';
   document.getElementById('add-salary').value='';
   document.getElementById('add-joined').value=new Date().toISOString().split('T')[0];
-  document.getElementById('add-company').value='MEG (Megah Enterprise Group)';
+  document.getElementById('add-company').value='MEG (Myeden Group)';
   setAddAutoId('Y');
   openOverlay('overlay-add');
   setTimeout(()=>document.getElementById('add-name').focus(),100);
@@ -5206,7 +5205,7 @@ function tabEmployment(e){
   <div class="fg fg2">
     <div class="fg-item"><label>Company</label>
       <input value="${h(e.company)}" list="co-list" onchange="uf('company',this.value)">
-      <datalist id="co-list"><option>MEG (Megah Enterprise Group)</option><option>ABC (ABC Holdings)</option></datalist>
+      <datalist id="co-list"><option>MEG (Myeden Group)</option><option>ABC (ABC Holdings)</option></datalist>
     </div>
     <div class="fg-item"><label>Department</label>
       <input value="${h(e.dept)}" list="dept-list" onchange="setDept(this.value);renderProfileHeader()">
@@ -6443,8 +6442,12 @@ function openSaveBackupModal(){
 //  NOT from a local file:// double-click (Google OAuth requires a registered web origin).
 // ════════════════════════════════════════════
 const GDRIVE_CLIENT_ID = '325637074327-tn5dav9j587bive02oqrofujv9hb3giu.apps.googleusercontent.com';
-const GDRIVE_API_KEY = 'AIzaSyC50Utnaqgeaz6Qi52U-01CyoiAFdpSy0U';
-const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+// Broader scope (matches the working employment-form approach) so Load can list all JSON
+// backups in the shared folder, not just app-created files. No API key / Picker needed.
+const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file';
+// Drive folder to save into / list from. Paste a folder ID (the part after /folders/ in the
+// folder's URL) to keep all PayFlow backups together. Empty = Drive root.
+const GDRIVE_FOLDER_ID = '1PqLVBh8xbCDbmt52R1xMxoxWX6tVay7B';
 let _gdriveToken = null;
 let _gdriveTokenClient = null;
 
@@ -6490,6 +6493,7 @@ function _doDriveUpload(filename, jsonStr, onDone){
   toast('Uploading to Google Drive…');
   const boundary='-------payflow'+Date.now();
   const metadata={ name: filename, mimeType:'application/json' };
+  if(GDRIVE_FOLDER_ID) metadata.parents=[GDRIVE_FOLDER_ID];
   const body=
     '--'+boundary+'\r\n'+
     'Content-Type: application/json; charset=UTF-8\r\n\r\n'+
@@ -6498,7 +6502,7 @@ function _doDriveUpload(filename, jsonStr, onDone){
     'Content-Type: application/json\r\n\r\n'+
     jsonStr+'\r\n'+
     '--'+boundary+'--';
-  fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
+  fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name', {
     method:'POST',
     headers:{ 'Authorization':'Bearer '+_gdriveToken, 'Content-Type':'multipart/related; boundary='+boundary },
     body
@@ -6528,14 +6532,9 @@ function _doDriveUpload(filename, jsonStr, onDone){
   });
 }
 
-// ── LOAD FROM GOOGLE DRIVE — opens Google Picker, downloads selected JSON, restores it ──
-let _pickerApiLoaded = false;
-function _ensurePicker(cb){
-  if(_pickerApiLoaded && typeof google!=='undefined' && google.picker){ cb(); return; }
-  if(typeof gapi==='undefined'){ toast('Google API library not loaded yet. Try again in a moment.'); return; }
-  gapi.load('picker', ()=>{ _pickerApiLoaded=true; cb(); });
-}
-
+// ── LOAD FROM GOOGLE DRIVE — lists .json backups via Drive REST API (no Picker, no API key) ──
+//  Mirrors the proven employment-form approach: get token → list files in folder → custom
+//  in-app picker list → download selected via ?alt=media → restore. Avoids Picker/cookie/key issues.
 function loadFromGoogleDrive(){
   if(location.protocol==='file:'){
     toast('Google Drive load needs the hosted app (https://calexcl.github.io/MyPRSys/), not a local file.');
@@ -6545,54 +6544,87 @@ function loadFromGoogleDrive(){
     toast('Google sign-in library not loaded yet. Check your connection and try again.');
     return;
   }
-  // Get an access token (reuse if present), then open the picker
-  const openPicker = ()=>_ensurePicker(()=>_showDrivePicker());
+  _gdriveGetToken((token)=>_driveListBackups(token));
+}
+
+// Get an OAuth access token (reuse if present), else prompt sign-in
+function _gdriveGetToken(cb){
+  if(_gdriveToken){ cb(_gdriveToken); return; }
   if(!_gdriveTokenClient){
     _gdriveTokenClient = google.accounts.oauth2.initTokenClient({
       client_id: GDRIVE_CLIENT_ID, scope: GDRIVE_SCOPE,
       callback: (resp)=>{
-        if(resp && resp.access_token){ _gdriveToken=resp.access_token; openPicker(); }
+        if(resp && resp.access_token){ _gdriveToken=resp.access_token; cb(_gdriveToken); }
         else { toast('Google sign-in was cancelled or failed.'); }
       },
     });
   }
-  if(_gdriveToken) openPicker();
-  else _gdriveTokenClient.requestAccessToken({prompt:''});
+  _gdriveTokenClient.requestAccessToken({prompt:''});
 }
 
-function _showDrivePicker(){
-  try{
-    const view=new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setMimeTypes('application/json')
-      .setMode(google.picker.DocsViewMode.LIST);
-    const picker=new google.picker.PickerBuilder()
-      .setOAuthToken(_gdriveToken)
-      .setDeveloperKey(GDRIVE_API_KEY)
-      .addView(view)
-      .setTitle('Select a PayFlow .json backup to restore')
-      .setCallback(_pickerCallback)
-      .build();
-    picker.setVisible(true);
-  }catch(err){
-    toast('Could not open Google Picker: '+err.message);
-  }
+function _driveListBackups(token){
+  toast('Loading backups from Google Drive…');
+  let q="mimeType='application/json' and trashed=false";
+  if(GDRIVE_FOLDER_ID) q+=" and '"+GDRIVE_FOLDER_ID+"' in parents";
+  const url='https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+
+    '&orderBy=modifiedTime desc&fields=files(id,name,modifiedTime,size)&pageSize=50'+
+    '&supportsAllDrives=true&includeItemsFromAllDrives=true';
+  fetch(url,{ headers:{ 'Authorization':'Bearer '+token } })
+    .then(r=>{ if(r.status===401){ _gdriveToken=null; throw new Error('auth-expired'); } if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(data=>{
+      const files=(data.files)||[];
+      if(!files.length){ toast('No .json backups found in your Drive'+(GDRIVE_FOLDER_ID?' folder':'')+'.'); return; }
+      _showDriveBackupModal(files, token);
+    })
+    .catch(err=>{
+      if(err.message==='auth-expired'){ toast('Re-authorising…'); _gdriveGetToken((t)=>_driveListBackups(t)); }
+      else toast('Could not list Drive files: '+err.message);
+    });
 }
 
-function _pickerCallback(data){
-  if(!data || data.action!==google.picker.Action.PICKED) return;
-  const doc=data.docs && data.docs[0];
-  if(!doc){ return; }
-  const fileId=doc.id, fileName=doc.name||'backup.json';
-  toast('Downloading "'+fileName+'" from Drive…');
-  fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media', {
-    headers:{ 'Authorization':'Bearer '+_gdriveToken }
+function _showDriveBackupModal(files, token){
+  let html='<div style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">'+
+    '<div style="background:#fff;border-radius:10px;width:460px;max-width:94vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,0.25)">'+
+      '<div style="padding:14px 18px;border-bottom:1px solid rgba(0,0,0,0.1);font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px">'+
+        '<svg viewBox="0 0 24 24" fill="none" stroke="#0f9d58" stroke-width="2" style="width:18px;height:18px"><path d="M7.71 3.5L1.15 15l3.43 6 6.56-11.5zM22.85 15L16.29 3.5H9.42L16 15zM2.81 17l3.43 6h13.13l3.43-6z"/></svg>'+
+        'Load backup from Google Drive</div>'+
+      '<div style="font-size:11px;color:#888;padding:8px 18px 0">Select a .json backup to restore. This will replace current data.</div>'+
+      '<div style="overflow-y:auto;padding:10px 14px;flex:1">';
+  files.forEach((f,i)=>{
+    const d=new Date(f.modifiedTime);
+    const dateStr=d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const sizeKB=f.size?(Math.round(f.size/1024*10)/10)+' KB':'';
+    html+='<div class="drive-bk-item" data-id="'+f.id+'" data-name="'+h(f.name)+'" '+
+      'style="padding:10px 12px;border:1px solid rgba(0,0,0,0.1);border-radius:6px;margin-bottom:7px;cursor:pointer;display:flex;justify-content:space-between;align-items:center" '+
+      'onmouseover="this.style.background=\'#f0f7f0\'" onmouseout="this.style.background=\'\'">'+
+        '<div style="min-width:0"><div style="font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+h(f.name)+'</div>'+
+        '<div style="font-size:10px;color:#888;margin-top:2px">'+dateStr+(sizeKB?' · '+sizeKB:'')+'</div></div>'+
+        '<span style="padding:4px 12px;background:#0f9d58;color:#fff;border-radius:4px;font-size:11px;flex-shrink:0">Load</span>'+
+      '</div>';
+  });
+  html+='</div><div style="padding:10px 16px;border-top:1px solid rgba(0,0,0,0.1);text-align:right">'+
+    '<button class="btn btn-sm" onclick="this.closest(\'div[style*=fixed]\').remove()">Cancel</button></div></div></div>';
+  const wrap=document.createElement('div'); wrap.innerHTML=html;
+  const modal=wrap.firstElementChild; document.body.appendChild(modal);
+  modal.querySelectorAll('.drive-bk-item').forEach(item=>{
+    item.addEventListener('click',()=>{
+      const fileId=item.getAttribute('data-id'), fileName=item.getAttribute('data-name');
+      modal.remove();
+      _driveDownloadBackup(fileId, fileName, token);
+    });
+  });
+}
+
+function _driveDownloadBackup(fileId, fileName, token){
+  toast('Downloading "'+fileName+'"…');
+  fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media&supportsAllDrives=true', {
+    headers:{ 'Authorization':'Bearer '+token }
   })
-  .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+  .then(r=>{ if(r.status===401){ _gdriveToken=null; throw new Error('auth-expired'); } if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
   .then(text=>{
     let snap;
     try{ snap=JSON.parse(text); }
     catch(e){ toast('That file isn\'t valid JSON.'); return; }
-    // Confirm before overwriting current data
     confirmDo(
       'Restore from Google Drive?',
       'This will REPLACE all current data in the app with the contents of "'+fileName+'" ('+((snap.employees||[]).length)+' employees). '+
@@ -6600,7 +6632,10 @@ function _pickerCallback(data){
       ()=>{ _restoreSnapshot(snap, fileName); }
     );
   })
-  .catch(err=>{ toast('Drive download failed: '+err.message); });
+  .catch(err=>{
+    if(err.message==='auth-expired'){ toast('Re-authorising…'); _gdriveGetToken((t)=>_driveDownloadBackup(fileId,fileName,t)); }
+    else toast('Drive download failed: '+err.message);
+  });
 }
 
 function _restoreSnapshot(data, fileName){
@@ -7621,7 +7656,7 @@ function downloadXLSXTemplate(){
   const hints=[
     'Full name (required)','Chinese name or blank','NRIC: 900215-01-5055 or passport no','M or F','YYYY-MM-DD or DD/MM/YYYY — auto-detected from NRIC if blank',
     'e.g. Malaysian / Malaysian PR / Indonesian','Malay / Chinese / Indian / etc','Single / Married / Divorced / Widowed','Spouse full name or blank','Home address','Contact/mobile no e.g. 012-3456789','Email address',
-    'Leave blank for auto-generate','e.g. MEG (Megah Enterprise Group)','Department','Job title','FT=Full-Time  PT=Part-Time  TMP=Temporary  INT=Intern','YYYY-MM-DD or DD/MM/YYYY','CF=Confirmed  UP=Under Probation  R=Resigned  TM=Terminated',
+    'Leave blank for auto-generate','e.g. MEG (Myeden Group)','Department','Job title','FT=Full-Time  PT=Part-Time  TMP=Temporary  INT=Intern','YYYY-MM-DD or DD/MM/YYYY','CF=Confirmed  UP=Under Probation  R=Resigned  TM=Terminated',
     'Resignation letter date YYYY-MM-DD','Notice period end date YYYY-MM-DD','Last working day YYYY-MM-DD',
     'Monthly basic salary (numbers only)','EPF/KWSP member number','Auto-filled from NRIC if blank','Income tax TIN e.g. IG12345','Bank name e.g. Maybank','Bank account number',
     'Work start HH:MM e.g. 08:00','Work end HH:MM e.g. 17:00','Meal break in minutes (default 60)','OT calc days per month (default 26)','Any notes'
@@ -7696,9 +7731,9 @@ loadDB();
 
 if(!DB.employees.length){
   DB.employees=[
-    mkEmployee({name:'Ahmad bin Hassan',nric:'900215-01-5055',gender:'M',dept:'Engineering',jobTitle:'Senior Developer',empType:'FT',joined:'2023-01-15',salary:7500,company:'MEG (MyEden Group)'}),
-    mkEmployee({name:'Siti Rahimah binti Ali',nric:'880510-14-2234',gender:'F',dept:'Sales',jobTitle:'Sales Manager',empType:'FT',joined:'2022-06-01',salary:6200,company:'MEG (MyEden Group)'}),
-    mkEmployee({name:'Lim Wei Xin',cname:'林伟新',nric:'920830-07-3345',gender:'M',dept:'Finance',jobTitle:'Accountant',empType:'FT',joined:'2021-09-20',salary:5500,company:'MEG (MyEden Group)'}),
+    mkEmployee({name:'Ahmad bin Hassan',nric:'900215-01-5055',gender:'M',dept:'Engineering',jobTitle:'Senior Developer',empType:'FT',joined:'2023-01-15',salary:7500,company:'MEG (Myeden Group)'}),
+    mkEmployee({name:'Siti Rahimah binti Ali',nric:'880510-14-2234',gender:'F',dept:'Sales',jobTitle:'Sales Manager',empType:'FT',joined:'2022-06-01',salary:6200,company:'MEG (Myeden Group)'}),
+    mkEmployee({name:'Lim Wei Xin',cname:'林伟新',nric:'920830-07-3345',gender:'M',dept:'Finance',jobTitle:'Accountant',empType:'FT',joined:'2021-09-20',salary:5500,company:'MEG (Myeden Group)'}),
   ];
   DB.employees[0].confirmStatus='CF';
   DB.employees[1].confirmStatus='CF';
