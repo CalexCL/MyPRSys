@@ -180,6 +180,7 @@ tr.clickable:hover td{background:#f8f8f6}
 .empty svg{width:32px;height:32px;margin:0 auto 10px;display:block;opacity:.4}
 input[type=file]{display:none}
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -236,7 +237,7 @@ input[type=file]{display:none}
   </div>
   <div style="margin-top:auto;padding:12px 14px 14px;border-top:1px solid rgba(0,0,0,0.08);font-size:9px;color:#999;line-height:1.5">
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">v.2026.06.08-02:56</div>
+    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">v.2026.06.19-08:00</div>
   </div>
 </aside>
 
@@ -6376,6 +6377,15 @@ function openSaveBackupModal(){
         </div>
         <svg viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2" style="width:20px;height:20px;flex-shrink:0;margin-left:auto"><polyline points="20 6 9 17 4 12"/></svg>
       </label>
+
+      <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;cursor:pointer;transition:border .15s" id="loc-gdrive-card">
+        <input type="radio" name="bk-loc" value="gdrive" onchange="bkLocChange(this.value)" style="margin-top:2px;flex-shrink:0">
+        <div>
+          <div style="font-weight:600;font-size:13px">Save to Google Drive</div>
+          <div style="font-size:11px;color:#888;margin-top:2px">Uploads the .json backup straight to your Google Drive. Requires sign-in. Only works on the hosted app, not a local file.</div>
+        </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0f9d58" stroke-width="2" style="width:20px;height:20px;flex-shrink:0;margin-left:auto"><path d="M7.71 3.5L1.15 15l3.43 6 6.56-11.5zM22.85 15L16.29 3.5H9.42L16 15zM2.81 17l3.43 6h13.13l3.43-6z"/></svg>
+      </label>
     </div>
 
     <div id="bk-filename-wrap" style="display:none;margin-bottom:6px">
@@ -6389,21 +6399,22 @@ function openSaveBackupModal(){
     </div>`;
 
   window.bkLocChange=function(val){
-    const cards={browser:'loc-browser-card',json:'loc-json-card',xlsx:'loc-xlsx-card',csv:'loc-csv-card',both:'loc-both-card'};
+    const cards={browser:'loc-browser-card',json:'loc-json-card',xlsx:'loc-xlsx-card',csv:'loc-csv-card',both:'loc-both-card',gdrive:'loc-gdrive-card'};
     Object.entries(cards).forEach(([k,id])=>{
       const el=document.getElementById(id);
       if(el) el.style.borderColor=k===val?'#2563eb':'rgba(0,0,0,0.15)';
     });
     const fnWrap=document.getElementById('bk-filename-wrap');
     const sum=document.getElementById('bk-loc-summary');
-    const showFile=['json','xlsx','csv','both'].includes(val);
+    const showFile=['json','xlsx','csv','both','gdrive'].includes(val);
     if(fnWrap) fnWrap.style.display=showFile?'block':'none';
     const msgs={
       browser:'Backup will be saved to <strong>browser localStorage</strong>. It will persist between sessions on this browser.',
       json:'A <strong>.json file</strong> will be downloaded to your computer. Save it to your preferred location.',
       xlsx:'An <strong>.xlsx Excel file</strong> will be downloaded. Open it in Excel or Google Sheets.',
       csv:'A <strong>.csv file</strong> will be downloaded. Import it back later using the CSV import above.',
-      both:'Backup saved to <strong>browser localStorage</strong> AND a <strong>.json file</strong> downloaded to your computer.'
+      both:'Backup saved to <strong>browser localStorage</strong> AND a <strong>.json file</strong> downloaded to your computer.',
+      gdrive:'The <strong>.json backup</strong> will be uploaded to your <strong>Google Drive</strong>. You\'ll be asked to sign in and grant permission the first time. <em>Only works on the hosted site, not a local file.</em>'
     };
     if(sum) sum.innerHTML=msgs[val]||'';
   };
@@ -6419,6 +6430,96 @@ function openSaveBackupModal(){
   openOverlay('overlay-edit');
   // Highlight default
   setTimeout(()=>{ const el=document.getElementById('loc-browser-card'); if(el) el.style.borderColor='#2563eb'; },50);
+}
+
+// ════════════════════════════════════════════
+//  GOOGLE DRIVE SAVE — uploads JSON backup to the user's Drive via OAuth (drive.file scope)
+//  Only works when the app is served from the registered origin (https://calexcl.github.io),
+//  NOT from a local file:// double-click (Google OAuth requires a registered web origin).
+// ════════════════════════════════════════════
+const GDRIVE_CLIENT_ID = '173250268242-hclr4b27h5mp0clin859ea3ha5ffha4f.apps.googleusercontent.com';
+const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+let _gdriveToken = null;
+let _gdriveTokenClient = null;
+
+function gdriveAvailable(){
+  // GIS library loaded AND running from http(s), not file://
+  return (typeof google!=='undefined' && google.accounts && google.accounts.oauth2 && location.protocol.startsWith('http'));
+}
+
+function uploadJSONToDrive(filename, jsonStr, onDone){
+  if(location.protocol==='file:'){
+    toast('Google Drive save needs the hosted app (https://calexcl.github.io/MyPRSys/), not a local file.');
+    if(onDone) onDone(false); return;
+  }
+  if(typeof google==='undefined' || !google.accounts || !google.accounts.oauth2){
+    toast('Google sign-in library not loaded yet. Check your connection and try again.');
+    if(onDone) onDone(false); return;
+  }
+  // Build / reuse the token client
+  if(!_gdriveTokenClient){
+    _gdriveTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GDRIVE_CLIENT_ID,
+      scope: GDRIVE_SCOPE,
+      callback: (resp)=>{
+        if(resp && resp.access_token){
+          _gdriveToken = resp.access_token;
+          _doDriveUpload(filename, jsonStr, onDone);
+        } else {
+          toast('Google sign-in was cancelled or failed.');
+          if(onDone) onDone(false);
+        }
+      },
+    });
+  }
+  // Request a token (shows Google account/consent popup). If we already have one, reuse it.
+  if(_gdriveToken){
+    _doDriveUpload(filename, jsonStr, onDone);
+  } else {
+    _gdriveTokenClient.requestAccessToken({prompt:''});
+  }
+}
+
+function _doDriveUpload(filename, jsonStr, onDone){
+  toast('Uploading to Google Drive…');
+  const boundary='-------payflow'+Date.now();
+  const metadata={ name: filename, mimeType:'application/json' };
+  const body=
+    '--'+boundary+'\r\n'+
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n'+
+    JSON.stringify(metadata)+'\r\n'+
+    '--'+boundary+'\r\n'+
+    'Content-Type: application/json\r\n\r\n'+
+    jsonStr+'\r\n'+
+    '--'+boundary+'--';
+  fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
+    method:'POST',
+    headers:{ 'Authorization':'Bearer '+_gdriveToken, 'Content-Type':'multipart/related; boundary='+boundary },
+    body
+  })
+  .then(r=>{
+    if(r.status===401){ _gdriveToken=null; throw new Error('auth-expired'); }
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  })
+  .then(data=>{
+    toast('Saved "'+(data.name||filename)+'" to your Google Drive ✓');
+    // Log in backup history
+    if(!DB.backupHistory) DB.backupHistory=[];
+    DB.backupHistory.push({savedAt:fmtNow(),count:DB.employees.length,size:fmtBytes(byteSize(jsonStr)),remark:'Google Drive upload',location:'Google Drive',fileOnly:true});
+    DB.lastSaved=fmtNow(); DB.lastSaveLocation='Google Drive'; saveDB();
+    if(onDone) onDone(true);
+  })
+  .catch(err=>{
+    if(err.message==='auth-expired'){
+      // Token expired — re-request once
+      toast('Re-authorising with Google…');
+      _gdriveTokenClient.requestAccessToken({prompt:''});
+    } else {
+      toast('Google Drive upload failed: '+err.message);
+      if(onDone) onDone(false);
+    }
+  });
 }
 
 function doSaveBackup(loc, remark, fname){
@@ -6457,6 +6558,11 @@ function doSaveBackup(loc, remark, fname){
     DB.backupHistory.push({savedAt:fmtNow(),count:DB.employees.length,size:fmtBytes(byteSize(jsonStr)),remark,location:'File (CSV)',fileOnly:true});
     DB.lastSaved=fmtNow();
     saveDB();
+  }
+  if(loc==='gdrive'){
+    const driveName=(fname||'payflow_backup')+'.json';
+    uploadJSONToDrive(driveName, jsonStr, (ok)=>{ if(ok){ updateDashSaveStatus('saved', DB.lastSaved, 'Google Drive'); switchTab('backup'); } });
+    return; // async — history/status handled in callback
   }
   switchTab('backup');
 }
