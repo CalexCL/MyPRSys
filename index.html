@@ -181,6 +181,7 @@ tr.clickable:hover td{background:#f8f8f6}
 input[type=file]{display:none}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js" async defer></script>
 </head>
 <body>
 
@@ -237,7 +238,7 @@ input[type=file]{display:none}
   </div>
   <div style="margin-top:auto;padding:12px 14px 14px;border-top:1px solid rgba(0,0,0,0.08);font-size:9px;color:#999;line-height:1.5">
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">v.2026.06.19-08:00</div>
+    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">v.2026.06.19-12:00</div>
   </div>
 </aside>
 
@@ -333,6 +334,10 @@ input[type=file]{display:none}
         <button class="btn btn-sm btn-success" onclick="document.getElementById('dash-csv-input-top').click()" title="Quick import CSV">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           Import CSV
+        </button>
+        <button class="btn btn-sm" onclick="loadFromGoogleDrive()" title="Load a .json backup from your Google Drive" style="border-color:#0f9d58;color:#0f9d58">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#0f9d58" stroke-width="2" style="width:12px;height:12px"><path d="M7.71 3.5L1.15 15l3.43 6 6.56-11.5zM22.85 15L16.29 3.5H9.42L16 15zM2.81 17l3.43 6h13.13l3.43-6z"/></svg>
+          Load from Drive
         </button>
         <input type="file" id="dash-json-input-top" accept=".json" onchange="dashFileImport(this,'json')">
         <input type="file" id="dash-csv-input-top" accept=".csv,.txt" onchange="dashFileImport(this,'csv')">
@@ -6437,7 +6442,8 @@ function openSaveBackupModal(){
 //  Only works when the app is served from the registered origin (https://calexcl.github.io),
 //  NOT from a local file:// double-click (Google OAuth requires a registered web origin).
 // ════════════════════════════════════════════
-const GDRIVE_CLIENT_ID = '173250268242-hclr4b27h5mp0clin859ea3ha5ffha4f.apps.googleusercontent.com';
+const GDRIVE_CLIENT_ID = '325637074327-tn5dav9j587bive02oqrofujv9hb3giu.apps.googleusercontent.com';
+const GDRIVE_API_KEY = 'AIzaSyC50Utnaqgeaz6Qi52U-01CyoiAFdpSy0U';
 const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 let _gdriveToken = null;
 let _gdriveTokenClient = null;
@@ -6520,6 +6526,105 @@ function _doDriveUpload(filename, jsonStr, onDone){
       if(onDone) onDone(false);
     }
   });
+}
+
+// ── LOAD FROM GOOGLE DRIVE — opens Google Picker, downloads selected JSON, restores it ──
+let _pickerApiLoaded = false;
+function _ensurePicker(cb){
+  if(_pickerApiLoaded && typeof google!=='undefined' && google.picker){ cb(); return; }
+  if(typeof gapi==='undefined'){ toast('Google API library not loaded yet. Try again in a moment.'); return; }
+  gapi.load('picker', ()=>{ _pickerApiLoaded=true; cb(); });
+}
+
+function loadFromGoogleDrive(){
+  if(location.protocol==='file:'){
+    toast('Google Drive load needs the hosted app (https://calexcl.github.io/MyPRSys/), not a local file.');
+    return;
+  }
+  if(typeof google==='undefined' || !google.accounts || !google.accounts.oauth2){
+    toast('Google sign-in library not loaded yet. Check your connection and try again.');
+    return;
+  }
+  // Get an access token (reuse if present), then open the picker
+  const openPicker = ()=>_ensurePicker(()=>_showDrivePicker());
+  if(!_gdriveTokenClient){
+    _gdriveTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GDRIVE_CLIENT_ID, scope: GDRIVE_SCOPE,
+      callback: (resp)=>{
+        if(resp && resp.access_token){ _gdriveToken=resp.access_token; openPicker(); }
+        else { toast('Google sign-in was cancelled or failed.'); }
+      },
+    });
+  }
+  if(_gdriveToken) openPicker();
+  else _gdriveTokenClient.requestAccessToken({prompt:''});
+}
+
+function _showDrivePicker(){
+  try{
+    const view=new google.picker.DocsView(google.picker.ViewId.DOCS)
+      .setMimeTypes('application/json')
+      .setMode(google.picker.DocsViewMode.LIST);
+    const picker=new google.picker.PickerBuilder()
+      .setOAuthToken(_gdriveToken)
+      .setDeveloperKey(GDRIVE_API_KEY)
+      .addView(view)
+      .setTitle('Select a PayFlow .json backup to restore')
+      .setCallback(_pickerCallback)
+      .build();
+    picker.setVisible(true);
+  }catch(err){
+    toast('Could not open Google Picker: '+err.message);
+  }
+}
+
+function _pickerCallback(data){
+  if(!data || data.action!==google.picker.Action.PICKED) return;
+  const doc=data.docs && data.docs[0];
+  if(!doc){ return; }
+  const fileId=doc.id, fileName=doc.name||'backup.json';
+  toast('Downloading "'+fileName+'" from Drive…');
+  fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media', {
+    headers:{ 'Authorization':'Bearer '+_gdriveToken }
+  })
+  .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+  .then(text=>{
+    let snap;
+    try{ snap=JSON.parse(text); }
+    catch(e){ toast('That file isn\'t valid JSON.'); return; }
+    // Confirm before overwriting current data
+    confirmDo(
+      'Restore from Google Drive?',
+      'This will REPLACE all current data in the app with the contents of "'+fileName+'" ('+((snap.employees||[]).length)+' employees). '+
+      'Your current data will be overwritten. Make sure you have a backup first. Continue?',
+      ()=>{ _restoreSnapshot(snap, fileName); }
+    );
+  })
+  .catch(err=>{ toast('Drive download failed: '+err.message); });
+}
+
+function _restoreSnapshot(data, fileName){
+  try{
+    if(!(data.employees && Array.isArray(data.employees))){
+      toast('Invalid backup — missing employees array.'); return;
+    }
+    DB.employees=data.employees;
+    if(data.payslips) DB.payslips=data.payslips;
+    if(data.backupHistory) DB.backupHistory=data.backupHistory;
+    if(data.companies && Array.isArray(data.companies) && data.companies.length){ DB.companies=data.companies; }
+    if(data.activeCompanyId) DB.activeCompanyId=data.activeCompanyId;
+    if(data.nextCompanyId) DB.nextCompanyId=data.nextCompanyId;
+    DB.nextId=Math.max(...DB.employees.map(e=>e.id),0)+1;
+    migrateToMultiCompany();
+    saveDB();
+    if(typeof updateCompanyBadge==='function') updateCompanyBadge();
+    toast('Restored '+DB.employees.length+' employees from "'+fileName+'" ✓');
+    showSection('dashboard');
+    renderDashboard();
+    if(typeof renderList==='function') renderList();
+  }catch(err){
+    toast('Restore failed: '+err.message);
+  }
 }
 
 function doSaveBackup(loc, remark, fname){
@@ -7591,9 +7696,9 @@ loadDB();
 
 if(!DB.employees.length){
   DB.employees=[
-    mkEmployee({name:'Ahmad bin Hassan',nric:'900215-01-5055',gender:'M',dept:'Engineering',jobTitle:'Senior Developer',empType:'FT',joined:'2023-01-15',salary:7500,company:'MEG (Megah Enterprise Group)'}),
-    mkEmployee({name:'Siti Rahimah binti Ali',nric:'880510-14-2234',gender:'F',dept:'Sales',jobTitle:'Sales Manager',empType:'FT',joined:'2022-06-01',salary:6200,company:'MEG (Megah Enterprise Group)'}),
-    mkEmployee({name:'Lim Wei Xin',cname:'林伟新',nric:'920830-07-3345',gender:'M',dept:'Finance',jobTitle:'Accountant',empType:'FT',joined:'2021-09-20',salary:5500,company:'MEG (Megah Enterprise Group)'}),
+    mkEmployee({name:'Ahmad bin Hassan',nric:'900215-01-5055',gender:'M',dept:'Engineering',jobTitle:'Senior Developer',empType:'FT',joined:'2023-01-15',salary:7500,company:'MEG (MyEden Group)'}),
+    mkEmployee({name:'Siti Rahimah binti Ali',nric:'880510-14-2234',gender:'F',dept:'Sales',jobTitle:'Sales Manager',empType:'FT',joined:'2022-06-01',salary:6200,company:'MEG (MyEden Group)'}),
+    mkEmployee({name:'Lim Wei Xin',cname:'林伟新',nric:'920830-07-3345',gender:'M',dept:'Finance',jobTitle:'Accountant',empType:'FT',joined:'2021-09-20',salary:5500,company:'MEG (MyEden Group)'}),
   ];
   DB.employees[0].confirmStatus='CF';
   DB.employees[1].confirmStatus='CF';
