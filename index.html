@@ -237,7 +237,7 @@ input[type=file]{display:none}
   </div>
   <div style="margin-top:auto;padding:12px 14px 14px;border-top:1px solid rgba(0,0,0,0.08);font-size:9px;color:#999;line-height:1.5">
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">v.2026.06.23-09:00</div>
+    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">v.2026.07.04-12:00</div>
   </div>
 </aside>
 
@@ -1967,6 +1967,30 @@ function calcALForEmployee(emp){
 // Legacy alias — used during mkEmployee init (before resignation date exists)
 function calcAL(joined){
   return calcALBand(joined, null);
+}
+
+// ── AL ENTITLEMENT (display default) ──
+// First year of service → prorated from join date by completed months (half-month rule:
+//   join day <=15 counts that month) × band/12, rounded to nearest whole day (>=.5 up).
+// Second year onward → full service-band entitlement (calcALBand / MYAL logic).
+// refDate defaults to end of the join year for year-1 proration, else today's band.
+function alEntitlement(emp){
+  if(!emp) return 8;
+  const joinStr = (typeof empEarliestJoin==='function') ? empEarliestJoin(emp) : emp.dateJoined;
+  if(!joinStr) return 8;
+  const j = new Date(joinStr);
+  if(isNaN(j.getTime())) return 8;
+  const now = new Date();
+  const band = calcALForEmployee(emp); // service-band (8/12/16) at current tenure/ref
+  // Are we still within the employee's FIRST calendar year of service?
+  // First year = the join year. In subsequent calendar years → full band.
+  const inFirstYear = now.getFullYear() === j.getFullYear();
+  if(!inFirstYear) return band;
+  // Year-1 proration: completed months from join to end of join year (half-month rule)
+  const startMonth = j.getMonth() + (j.getDate() <= 15 ? 0 : 1); // if joined after 15th, skip join month
+  const monthsWorked = Math.max(0, 12 - startMonth);
+  const raw = band * monthsWorked / 12;
+  return Math.floor(raw + 0.5); // round half up to whole day
 }
 function toHHMM(mins){
   if(!mins && mins!==0) return '—';
@@ -5654,21 +5678,29 @@ function tabLeaves(e){
   // Last working day = latest separation date across companies (only meaningful if fully exited)
   const sepDates = allBlocks.map(b=>b.noticePeriodEndDate||b.resignedDate).filter(Boolean);
   const lastWorkDay = sepDates.length ? sepDates.map(d=>new Date(d)).sort((a,b)=>b-a)[0].toISOString().split('T')[0] : (e.noticePeriodEndDate||e.resignedDate||'');
-  const bandAL = calcALForEmployee(e);  // Rule A — earliest group join
+  const bandAL = calcALForEmployee(e);  // Rule A — earliest group join (full band)
+  const autoAL = alEntitlement(e);      // first-year prorated, else band (the auto default)
 
   // Init annualLeave if missing — do NOT overwrite given on every render
   if(!e.annualLeave){
-    e.annualLeave={given:bandAL,bf:0,kpi:'UQ',usedMonth:0,usedToDate:0};
+    e.annualLeave={given:autoAL,bf:0,kpi:'UQ',usedMonth:0,usedToDate:0,_alAuto:true};
   }
-  // Auto-correct stale 'given' values from old buggy calcAL formula
-  // Valid band values are 8, 12, 16 — anything else (1, 4, 6, etc.) is a stale value
-  const VALID_BANDS = [8, 12, 16];
-  if(!VALID_BANDS.includes(e.annualLeave.given)){
-    e.annualLeave.given = bandAL;
+  // One-time migration for legacy records that never had the auto flag:
+  //  - If given is a stale/old value AND user hasn't explicitly edited, adopt the auto value.
+  //  - Mark _alAuto so future renders track the auto calc until the user edits.
+  if(e.annualLeave._alAuto===undefined){
+    // Legacy heuristic: treat exact old full-band values as auto-managed, adopt prorated auto.
+    const legacyBands=[8,12,16];
+    e.annualLeave._alAuto = legacyBands.includes(e.annualLeave.given);
+  }
+  // While auto-managed (user hasn't manually edited), keep the entitlement in sync with the
+  // prorated/band auto value. Once the user edits, _alAuto=false and this NEVER overwrites again.
+  if(e.annualLeave._alAuto){
+    e.annualLeave.given = autoAL;
   }
   if(!e.unpaidLeave) e.unpaidLeave={taken:0,usedToDate:0};
 
-  // Use stored given (may be user-overridden) for balance calculations
+  // Use stored given (auto or user-overridden) for balance calculations
   const alGiven = e.annualLeave.given;
   const kpi = KPI_OPTS.find(k=>k.v===e.annualLeave.kpi)||KPI_OPTS[0];
   if(!e.replacementLeave) e.replacementLeave={given:0,usedMonth:0,usedToDate:0};
@@ -5738,7 +5770,9 @@ function tabLeaves(e){
   <div class="sec-title">Annual Leave</div>
   <div class="fg fg3">
     <div class="fg-item"><label>Entitlement (prorated from joined date)</label>
-      <input type="number" value="${alGiven}" onchange="getE(curEmpId).annualLeave.given=parseInt(this.value)||0;getE(curEmpId).annualLeave._proRateAuto=false;refreshAlTab()">
+      <input type="number" step="1" value="${alGiven}" onchange="const emp=getE(curEmpId);emp.annualLeave.given=parseInt(this.value)||0;emp.annualLeave._alAuto=false;markUnsaved();refreshAlTab()"
+        title="Auto: first-year prorated from join date, full service band thereafter. Edit to override — your value will stick.">
+      <div style="font-size:10px;color:#888;margin-top:2px">${e.annualLeave._alAuto?('Auto ('+(new Date().getFullYear()===new Date(empEarliestJoin(e)||e.dateJoined).getFullYear()?'year-1 prorated':'service band')+')'):'Manually set — edit again to change'}</div>
     </div>
     <div class="fg-item"><label>KPI Status (for Brought Forward)</label>
       <select onchange="setKPI(this.value)">
