@@ -9,8 +9,8 @@
 <title>PayFlow HR &amp; Payroll System — User Manual</title>
 <!-- ═══════════════════════════════════════════════════════════════
      PayFlow HR & Payroll System — User Manual (English)
-     Manual Version : v.2026.07.04-07:00  (UVN)
-     Documents App  : PayFlow v.2026.07.04-07:00
+     Manual Version : v.2026.07.04-14:00  (UVN)
+     Documents App  : PayFlow v.2026.07.04-14:00
      Live App       : https://calexcl.github.io/MyPRSys/
      © MyEden Group Sdn. Bhd.
      ═══════════════════════════════════════════════════════════════ -->
@@ -135,7 +135,7 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
       calexcl/MyPRSys
     </a>
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div class="ver">v.2026.07.04-07:00</div>
+    <div class="ver">v.2026.07.04-14:00</div>
   </div>
 </aside>
 
@@ -143,7 +143,7 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <div class="main">
 
 <h1>PayFlow HR &amp; Payroll System</h1>
-<div class="sub">Complete User Manual · English · Documents app version <span class="ver">v.2026.07.04-07:00</span></div>
+<div class="sub">Complete User Manual · English · Documents app version <span class="ver">v.2026.07.04-14:00</span></div>
 <div class="sub">Live app: <a href="https://calexcl.github.io/MyPRSys/" target="_blank" rel="noopener">https://calexcl.github.io/MyPRSys/</a></div>
 
 <!-- ════════ 1. INTRODUCTION ════════ -->
@@ -479,12 +479,14 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <table>
 <tr><th>Scheme</th><th>Rule</th></tr>
 <tr><td><strong>EPF (KWSP)</strong></td><td>Official bracket table lookup. Under 60: employee 11% / employer 12% pattern (table values). Age 60+: employee 0% / employer 4%. Above the RM20,000 table ceiling, the exact percentage is used and rounded <em>up</em> to the nearest ringgit. Applies at all ages.</td></tr>
-<tr><td><strong>SOCSO (PERKESO)</strong></td><td>Wages capped at <strong>RM6,000</strong>. Under 60: standard (Employment Injury + Invalidity) table, both shares. Age 60+: <strong>employer-only</strong> Injury-scheme table (employee share forced to zero). Applies from age 18. Exempt if the "first-time contributor aged 57+" flag is set.</td></tr>
-<tr><td><strong>EIS (SIP)</strong></td><td>Wages capped at <strong>RM6,000</strong>; employee and employer pay equal shares (0.2% pattern table). Applies ages 18–60 only; also exempt under the 57+ first-timer flag.</td></tr>
+<tr><td><strong>SOCSO (PERKESO)</strong></td><td>Wages capped at <strong>RM6,000</strong>. Under 60: standard table, both shares — <strong>from June 2026</strong> the employee's share comprises two components, <em>Invalidity</em> plus the new <em>Non-Employment Injury</em> scheme (e.g. at the RM6,000 cap: employee RM74.40, employer RM104.15). Age 60+: <strong>employer-only</strong> Injury-scheme table (employee share forced to zero) — unchanged by the June 2026 revision. Applies from age 18. Exempt if the "first-time contributor aged 57+" flag is set.</td></tr>
+<tr><td><strong>EIS (SIP)</strong></td><td>Wages capped at <strong>RM6,000</strong>. <strong>From June 2026</strong> the shares are no longer equal: the employee pays the Non-Employment Injury rate and the employer pays a higher rate (at the cap: employee RM44.65, employer RM74.40). Periods before June 2026 use the previous equal-share table (RM11.90 each at the cap). Applies ages 18–60 only; also exempt under the 57+ first-timer flag.</td></tr>
 <tr><td><strong>PCB (MTD)</strong></td><td>Simplified estimate: <code>annual chargeable = (gross − employee EPF) × 12</code>, run through the resident progressive rate scale (0% to RM5,000 … up to 25% above RM400,000), divided by 12. <strong>Deducted only when its checkbox is ticked in the Statutory step</strong> — off by default.</td></tr>
 </table>
 
 <p><strong>Age</strong> is always measured as at the <em>last day of the payroll month</em>, so an employee turning 60 mid-month is treated as 60 for that whole period.</p>
+
+<div class="note g"><strong>Automatic rate-era switching.</strong> The June 2026 SOCSO/EIS revision is date-aware: when you run payroll for <strong>May 2026 or any earlier period</strong>, PayFlow automatically applies the pre-June-2026 tables; <strong>June 2026 onward</strong> uses the new tables with the Non-Employment Injury component. You do not need to select anything — the payroll period drives the choice. Already-approved payslips are stored values and are never recalculated.</div>
 
 <div class="note a"><strong>Verify before filing.</strong> PayFlow's tables follow the published KWSP/PERKESO schedules and a simplified PCB scale, but statutory rates change from time to time and the PCB figure is an <em>estimate</em>, not a substitute for LHDN's official MTD computation. Always cross-check against the current official tables (or your statutory portal figures) before submission, and use the per-run override fields to align if needed.</div>
 </section>
@@ -580,8 +582,8 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <tr><td style="width:220px"><strong>Application</strong></td><td>PayFlow HR &amp; Payroll System (MyPRSys)</td></tr>
 <tr><td><strong>Live URL</strong></td><td><a href="https://calexcl.github.io/MyPRSys/" target="_blank" rel="noopener">https://calexcl.github.io/MyPRSys/</a></td></tr>
 <tr><td><strong>Repository</strong></td><td><a href="https://github.com/calexcl/MyPRSys" target="_blank" rel="noopener">github.com/calexcl/MyPRSys</a></td></tr>
-<tr><td><strong>App version documented</strong></td><td><span class="ver">v.2026.07.04-07:00</span></td></tr>
-<tr><td><strong>Manual version</strong></td><td><span class="ver">v.2026.07.04-07:00</span></td></tr>
+<tr><td><strong>App version documented</strong></td><td><span class="ver">v.2026.07.04-14:00</span></td></tr>
+<tr><td><strong>Manual version</strong></td><td><span class="ver">v.2026.07.04-14:00</span></td></tr>
 <tr><td><strong>Owner</strong></td><td>MyEden Group Sdn. Bhd. — internal use</td></tr>
 </table>
 </div>
