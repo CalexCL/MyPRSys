@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>PayFlow HR &amp; Payroll System — User Manual</title>
+<!-- ═══════════════════════════════════════════════════════════════
+     PayFlow HR & Payroll System — User Manual (English)
+     Manual Version : v.2026.07.04-07:00  (UVN)
+     Documents App  : PayFlow v.2026.07.04-07:00
+     Live App       : https://calexcl.github.io/MyPRSys/
+     © MyEden Group Sdn. Bhd.
+     ═══════════════════════════════════════════════════════════════ -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f5f3; --side:#f0efe8; --card:#fff; --line:rgba(0,0,0,0.10);
+  --ink:#111; --mut:#666; --dim:#999; --blue:#2563eb; --blue-soft:#eff6ff;
+  --green:#166534; --green-soft:#f0fdf4; --green-line:#86efac;
+  --amber:#92400e; --amber-soft:#fef3c7; --amber-line:#fcd34d;
+  --red:#991b1b; --red-soft:#fef2f2; --red-line:#fecaca;
+}
+html{scroll-behavior:smooth}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:13.5px;background:var(--bg);color:var(--ink);line-height:1.6}
+
+/* ── Layout ─────────────────────────────────────── */
+.wrap{display:flex;min-height:100vh}
+.sidebar{width:236px;background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:50}
+.main{flex:1;margin-left:236px;padding:34px 44px 80px;max-width:960px}
+
+/* ── Sidebar (mirrors the app) ──────────────────── */
+.brand{padding:18px 16px 12px;border-bottom:1px solid var(--line)}
+.brand .t1{font-size:14px;font-weight:700;letter-spacing:.2px}
+.brand .t2{font-size:10px;color:var(--mut);margin-top:2px}
+.brand .badge{display:inline-block;margin-top:8px;font-size:9px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--blue);background:var(--blue-soft);border:1px solid #bfdbfe;border-radius:20px;padding:2px 9px}
+.nav-sec{padding:12px 16px 3px;font-size:9px;font-weight:600;color:#aaa;letter-spacing:.8px;text-transform:uppercase}
+.nav-item{display:block;padding:7px 16px;font-size:12px;cursor:pointer;color:var(--mut);border-left:2px solid transparent;transition:all .15s;text-decoration:none;user-select:none}
+.nav-item:hover{color:var(--ink);background:rgba(255,255,255,.6)}
+.nav-item.active{color:var(--ink);background:#fff;border-left-color:var(--blue);font-weight:500}
+.side-foot{margin-top:auto;padding:12px 16px 14px;border-top:1px solid rgba(0,0,0,0.08);font-size:9px;color:var(--dim);line-height:1.7}
+.side-foot a.gh{display:flex;align-items:center;gap:6px;color:var(--mut);text-decoration:none;font-size:10px;font-weight:600;margin-bottom:6px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;transition:all .15s}
+.side-foot a.gh:hover{color:var(--blue);border-color:var(--blue)}
+.side-foot a.gh svg{width:13px;height:13px;flex-shrink:0}
+.ver{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.2px}
+
+/* ── Content ────────────────────────────────────── */
+h1{font-size:24px;font-weight:700;letter-spacing:-.3px;margin-bottom:6px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:6px}
+section{margin-top:44px;scroll-margin-top:20px}
+h2{font-size:18px;font-weight:700;padding-bottom:8px;border-bottom:2px solid var(--ink);margin-bottom:16px;letter-spacing:-.2px}
+h2 .no{color:var(--dim);font-weight:600;margin-right:8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}
+h3{font-size:14px;font-weight:650;margin:22px 0 8px}
+p{margin-bottom:10px}
+ul,ol{margin:0 0 12px 22px}
+li{margin-bottom:5px}
+strong{font-weight:600}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#eeeee9;border:1px solid var(--line);border-radius:4px;padding:1px 5px;white-space:nowrap}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin-bottom:14px}
+.note{border-radius:8px;padding:11px 14px;font-size:12.5px;margin:12px 0}
+.note.g{background:var(--green-soft);border:1px solid var(--green-line);color:var(--green)}
+.note.a{background:var(--amber-soft);border:1px solid var(--amber-line);color:var(--amber)}
+.note.r{background:var(--red-soft);border:1px solid var(--red-line);color:var(--red)}
+.note.b{background:var(--blue-soft);border:1px solid #bfdbfe;color:#1e40af}
+.kbd{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;background:#fff;border:1px solid #bbb;border-bottom-width:2px;border-radius:4px;padding:1px 6px}
+.btnref{display:inline-block;font-size:11px;font-weight:600;background:#fff;border:1px solid var(--line);border-radius:6px;padding:1px 8px;box-shadow:0 1px 0 rgba(0,0,0,.05)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin:10px 0 14px;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+th{background:#f8f8f6;text-align:left;font-size:10.5px;font-weight:650;letter-spacing:.4px;text-transform:uppercase;color:var(--mut);padding:8px 12px;border-bottom:1px solid var(--line)}
+td{padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.06);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.step{display:flex;gap:14px;margin-bottom:16px}
+.step .n{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.step .b{flex:1}
+.step .b h4{font-size:13.5px;font-weight:650;margin-bottom:4px}
+.toc-top{display:none}
+a{color:var(--blue)}
+hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
+
+/* ── Mobile ─────────────────────────────────────── */
+.menu-btn{display:none}
+@media(max-width:860px){
+  .sidebar{transform:translateX(-100%);transition:transform .2s}
+  .sidebar.open{transform:none;box-shadow:0 0 40px rgba(0,0,0,.2)}
+  .main{margin-left:0;padding:22px 18px 70px}
+  .menu-btn{display:flex;align-items:center;gap:8px;position:fixed;top:12px;right:12px;z-index:60;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+}
+@media print{
+  .sidebar,.menu-btn{display:none}
+  .main{margin:0;max-width:none;padding:0}
+  body{background:#fff}
+  section{break-inside:avoid-page}
+}
+</style>
+</head>
+<body>
+<button class="menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰ Menu</button>
+<div class="wrap">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="t1">PayFlow</div>
+    <div class="t2">HR &amp; Payroll System</div>
+    <span class="badge">User Manual</span>
+  </div>
+
+  <div class="nav-sec">Basics</div>
+  <a class="nav-item" href="#intro">1 · Introduction</a>
+  <a class="nav-item" href="#start">2 · Getting Started</a>
+  <a class="nav-item" href="#interface">3 · Interface Overview</a>
+
+  <div class="nav-sec">Setup</div>
+  <a class="nav-item" href="#companies">4 · Companies</a>
+  <a class="nav-item" href="#dashboard">5 · Dashboard</a>
+  <a class="nav-item" href="#employees">6 · Employees</a>
+  <a class="nav-item" href="#profile">7 · Employee Profile</a>
+
+  <div class="nav-sec">Payroll</div>
+  <a class="nav-item" href="#runpayroll">8 · Run Payroll</a>
+  <a class="nav-item" href="#payslips">9 · Payslips</a>
+  <a class="nav-item" href="#reports">10 · Reports</a>
+  <a class="nav-item" href="#statutory">11 · Statutory Reference</a>
+
+  <div class="nav-sec">Data &amp; Tools</div>
+  <a class="nav-item" href="#backup">12 · Backups &amp; Import</a>
+  <a class="nav-item" href="#myal">13 · MYAL Calculator</a>
+  <a class="nav-item" href="#faq">14 · Troubleshooting</a>
+  <a class="nav-item" href="#about">15 · About</a>
+
+  <div class="side-foot">
+    <a class="gh" href="https://github.com/calexcl/MyPRSys" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      calexcl/MyPRSys
+    </a>
+    <div>&copy; MyEden Group Sdn. Bhd.</div>
+    <div class="ver">v.2026.07.04-07:00</div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+
+<h1>PayFlow HR &amp; Payroll System</h1>
+<div class="sub">Complete User Manual · English · Documents app version <span class="ver">v.2026.07.04-07:00</span></div>
+<div class="sub">Live app: <a href="https://calexcl.github.io/MyPRSys/" target="_blank" rel="noopener">https://calexcl.github.io/MyPRSys/</a></div>
+
+<!-- ════════ 1. INTRODUCTION ════════ -->
+<section id="intro">
+<h2><span class="no">1</span>Introduction</h2>
+<p>PayFlow is MyEden Group's in-house HR and payroll application. It manages the complete employee lifecycle — from onboarding, through monthly payroll and payslip generation, to resignation and separation — for <strong>multiple companies within the group</strong> from a single screen.</p>
+
+<div class="card">
+<h3 style="margin-top:0">What PayFlow does</h3>
+<ul>
+<li><strong>Employee database</strong> — full profiles across 8 tabs: personal details, employment, salary history, statutory settings, leave ledgers, allowances, other income, and separation records.</li>
+<li><strong>Multi-company management</strong> — register each group entity (with its own logo, registration number, EPF and SOCSO employer numbers), switch between them, and assign employees to one or more companies.</li>
+<li><strong>Guided monthly payroll</strong> — a step-by-step wizard that handles overtime, allowances, new-joiner and resignation proration, unpaid leave deductions, and Malaysian statutory contributions (EPF/KWSP, SOCSO, EIS, PCB).</li>
+<li><strong>Payslips</strong> — professional PDF payslips per employee, downloadable individually or as a combined file, plus CSV/JSON exports of full payroll runs.</li>
+<li><strong>Reports</strong> — year-to-date totals, per-period summaries, and per-employee payroll history.</li>
+<li><strong>Backups</strong> — save your database to the browser, download it as JSON/CSV/Excel, or back it up to a shared Google Drive folder and restore it on any PC.</li>
+<li><strong>MYAL Calculator</strong> — a built-in tool for annual leave entitlement and resignation notice period calculations under the Employment Act 1955, synced with the employee database.</li>
+</ul>
+</div>
+
+<h3>How the app is built (useful to know)</h3>
+<ul>
+<li>PayFlow is a <strong>single self-contained web page</strong> hosted on GitHub Pages. There is no server and no login — it runs entirely inside your browser.</li>
+<li>All data is stored <strong>locally in the browser</strong> you use (see <a href="#backup">Section 12</a> for what this means and how to move data between PCs).</li>
+<li>An internet connection is needed to open the page, generate PDF payslips (the PDF libraries load from a CDN), and use Google Drive backup. Everything else works once the page is loaded.</li>
+</ul>
+</section>
+
+<!-- ════════ 2. GETTING STARTED ════════ -->
+<section id="start">
+<h2><span class="no">2</span>Getting Started</h2>
+
+<div class="step"><div class="n">1</div><div class="b">
+<h4>Open the app</h4>
+<p>Go to <a href="https://calexcl.github.io/MyPRSys/" target="_blank" rel="noopener">https://calexcl.github.io/MyPRSys/</a> in a desktop browser. <strong>Google Chrome or Microsoft Edge on a PC is recommended</strong> — payroll tables and PDF generation are designed for a large screen.</p>
+</div></div>
+
+<div class="step"><div class="n">2</div><div class="b">
+<h4>Set up your companies first</h4>
+<p>Before adding employees, go to <span class="btnref">Companies</span> in the sidebar and register each group entity (see <a href="#companies">Section 4</a>). Employee IDs, payslip headers, and statutory employer numbers all come from the company record.</p>
+</div></div>
+
+<div class="step"><div class="n">3</div><div class="b">
+<h4>Add or import employees</h4>
+<p>Add employees one at a time with <span class="btnref">Add Employee</span>, or bulk-import from a CSV/Excel file using the template provided on the Dashboard (see <a href="#dashboard">Section 5</a>).</p>
+</div></div>
+
+<div class="step"><div class="n">4</div><div class="b">
+<h4>Run your first payroll</h4>
+<p>Once employees have salary records, open <span class="btnref">Run Payroll</span> and follow the wizard (see <a href="#runpayroll">Section 8</a>).</p>
+</div></div>
+
+<div class="step"><div class="n">5</div><div class="b">
+<h4>Make a backup</h4>
+<p>After any significant data entry, click <span class="btnref">Save</span> on the Dashboard and save a backup to Google Drive or download a JSON file. Get into this habit early — see the warning below.</p>
+</div></div>
+
+<div class="note r"><strong>⚠ Important — where your data lives.</strong> PayFlow stores everything in this browser on this computer. If you clear the browser's site data, use a different browser, use incognito/private mode, or switch to another PC, your data will not be there. Google Drive or JSON backups are the way to protect and move your database. See <a href="#backup">Section 12</a>.</div>
+
+<div class="note a"><strong>Seeing an old version after an update?</strong> Browsers sometimes cache the previous release. Press <span class="kbd">Ctrl</span> + <span class="kbd">Shift</span> + <span class="kbd">R</span> (hard refresh) to force-load the latest version. The version stamp at the bottom of the app's sidebar tells you which release you are on.</div>
+</section>
+
+<!-- ════════ 3. INTERFACE ════════ -->
+<section id="interface">
+<h2><span class="no">3</span>Interface Overview</h2>
+
+<h3>The sidebar</h3>
+<p>The left sidebar is the app's main navigation, grouped into four blocks:</p>
+<table>
+<tr><th>Group</th><th>Item</th><th>Purpose</th></tr>
+<tr><td rowspan="1"><strong>Active Company</strong></td><td>Company switcher</td><td>Shows which company you are currently working in. Click it to switch — most screens are scoped to the active company.</td></tr>
+<tr><td rowspan="4"><strong>Main / HR</strong></td><td>Dashboard</td><td>Overview, save status, import/export, quick employee table.</td></tr>
+<tr><td>Employees</td><td>Full employee list for the active company; add, open, and delete records.</td></tr>
+<tr><td>Run Payroll</td><td>The monthly payroll wizard.</td></tr>
+<tr><td>Payslips</td><td>All generated payslips; view, filter, download, export.</td></tr>
+<tr><td><strong>Main / HR</strong></td><td>Reports</td><td>YTD, per-period, and per-employee summaries.</td></tr>
+<tr><td><strong>Organisation</strong></td><td>Companies</td><td>Register and manage the group's legal entities.</td></tr>
+<tr><td><strong>Tools</strong></td><td>MYAL Calculator</td><td>Annual leave &amp; notice period calculator.</td></tr>
+</table>
+
+<h3>The active company concept</h3>
+<p>PayFlow is multi-company. One company is always the <strong>active company</strong> (shown in the sidebar badge). The Employees list, payroll runs, and payslips you see are those belonging to the active company. An employee can be assigned to more than one company, with separate employment details per company (see <a href="#profile">Section 7</a>).</p>
+
+<h3>Feedback and confirmations</h3>
+<ul>
+<li><strong>Toasts</strong> — short messages in the corner confirm actions ("Company added", "Employee saved", etc.).</li>
+<li><strong>Confirmation dialogs</strong> — destructive actions (delete employee, clear backups, restore) always ask "Are you sure?" first.</li>
+<li><strong>Save status</strong> — the Dashboard shows whether your data is saved, when it was last saved, and where (Browser / Drive / file).</li>
+</ul>
+</section>
+
+<!-- ════════ 4. COMPANIES ════════ -->
+<section id="companies">
+<h2><span class="no">4</span>Companies</h2>
+<p>Open <span class="btnref">Companies</span> in the sidebar. Each card is one legal entity in the group. Set up companies <em>before</em> adding employees.</p>
+
+<h3>Adding or editing a company</h3>
+<p>Click <span class="btnref">Add Company</span> (or the edit action on an existing card) and fill in:</p>
+<table>
+<tr><th>Field</th><th>Notes</th></tr>
+<tr><td>Company Name</td><td>Full legal name, e.g. <em>MyEden Group Sdn. Bhd.</em> — required. Appears on payslips.</td></tr>
+<tr><td>Short Name</td><td>Compact name shown in the company switcher and section headers.</td></tr>
+<tr><td>Registration No.</td><td>SSM registration number; printed on payslips.</td></tr>
+<tr><td>Tagline</td><td>Optional line under the company name on payslips.</td></tr>
+<tr><td>EPF (KWSP) Employer No.</td><td>The company's KWSP employer reference.</td></tr>
+<tr><td>SOCSO Employer No.</td><td>The company's PERKESO employer reference.</td></tr>
+<tr><td>Address</td><td>Printed in the payslip header.</td></tr>
+<tr><td>Logo</td><td>Upload an image; it is embedded into the database and shown on payslips. A placeholder is used if no logo is set.</td></tr>
+</table>
+
+<h3>Setting the active company</h3>
+<p>Use <span class="btnref">Set Active</span> on a company card, or the switcher at the top of the sidebar. The switcher also shows how many employees are assigned to each company. Employees, payroll, and payslips screens then show only that company's records.</p>
+
+<div class="note b"><strong>Employee ID prefix.</strong> Auto-generated employee IDs begin with the leading capital letters of the company name (e.g. <code>MEG…</code>). Name your companies with a clean uppercase prefix in mind — see <a href="#employees">Section 6</a>.</div>
+</section>
+
+<!-- ════════ 5. DASHBOARD ════════ -->
+<section id="dashboard">
+<h2><span class="no">5</span>Dashboard</h2>
+<p>The Dashboard is the home screen: headline counts, the save-status indicator, a searchable employee table, and — most importantly — the <strong>import and backup controls</strong>.</p>
+
+<h3>Top action buttons</h3>
+<table>
+<tr><th>Button</th><th>What it does</th></tr>
+<tr><td><span class="btnref">Add Employee</span></td><td>Opens the same Add Employee form as the Employees screen.</td></tr>
+<tr><td><span class="btnref">Save</span></td><td>Opens the <strong>Save Backup</strong> dialog — choose a remark and a save location (Browser, JSON/CSV/Excel download, or Google Drive). Details in <a href="#backup">Section 12</a>.</td></tr>
+<tr><td><span class="btnref">Import JSON</span></td><td>Restore a full database from a PayFlow JSON backup file.</td></tr>
+<tr><td><span class="btnref">Import CSV</span></td><td>Bulk-add or update employees from a CSV file.</td></tr>
+<tr><td><span class="btnref">Load from Drive</span></td><td>Sign in to Google Drive, list the backups in the shared folder, and restore one.</td></tr>
+</table>
+
+<h3>Import panel</h3>
+<p>The import area has four tabs — <strong>JSON Backup</strong>, <strong>CSV File</strong>, <strong>XLSX</strong>, and <strong>Template</strong> — with a drag-and-drop zone and a progress bar:</p>
+<ul>
+<li><strong>JSON Backup</strong> — restores the <em>entire</em> database (employees, companies, payslips, settings). Use this to move PayFlow to a new PC.</li>
+<li><strong>CSV File / XLSX</strong> — imports <em>employees only</em> and merges them with existing records. Column headers are matched flexibly (e.g. <code>kpi</code>, <code>kpistatus</code>, and <code>performancestatus</code> all map to the same field).</li>
+<li><strong>Template</strong> — download a ready-made CSV template (<code>payflow_employee_template.csv</code>) or its Excel equivalent, with every accepted column and an explanatory notes row. Fill it in, delete the notes row, and import.</li>
+</ul>
+
+<h3>Template columns</h3>
+<p>The employee template accepts: <code>name</code>, <code>chineseName</code>, <code>nric</code>, <code>gender</code>, <code>dob</code>, <code>nationality</code>, <code>race</code>, <code>maritalStatus</code>, <code>spouseName</code>, <code>address</code>, <code>contactNo</code>, <code>email</code>, <code>empId</code>, <code>company</code>, <code>dept</code>, <code>jobTitle</code>, <code>empType</code>, <code>dateJoined</code>, <code>confirmStatus</code>, <code>resignLetterDate</code>, <code>noticePeriodEndDate</code>, <code>resignedDate</code>, <code>basicSalary</code>, <code>kwspNo</code>, <code>socsoNo</code>, <code>tinNo</code>, <code>bankName</code>, <code>bankAccount</code>, <code>workFrom</code>, <code>workTo</code>, <code>mealDuration</code>, <code>otDays</code>, <code>kpiStatus</code>, <code>bfDays</code>, and <code>remarks</code>. Only <code>name</code> is strictly required; sensible defaults fill the rest.</p>
+
+<h3>Employee table controls</h3>
+<p>Below the import panel, the Dashboard lists employees with a live <strong>search box</strong>, a <strong>department filter</strong>, a <strong>status filter</strong>, and a <strong>sort selector</strong> (the chosen sort mode is remembered between visits).</p>
+</section>
+
+<!-- ════════ 6. EMPLOYEES ════════ -->
+<section id="employees">
+<h2><span class="no">6</span>Employees</h2>
+<p>The Employees screen lists everyone assigned to the <strong>active company</strong>, with columns for Employee ID, Name, Department, Job Title, Status, Date Confirmed, Type, Basic Salary, and Last Increment. Click any row to open the full <a href="#profile">Employee Profile</a>.</p>
+
+<h3>Adding an employee</h3>
+<p>Click <span class="btnref">Add Employee</span> and complete the form:</p>
+<ul>
+<li><strong>Full Name</strong> (required), <strong>Chinese Name</strong>, <strong>NRIC No</strong>, <strong>Gender</strong>, <strong>Date of Birth</strong>, <strong>Age</strong>.</li>
+<li><strong>NRIC smart entry</strong> — as you type the NRIC it is auto-formatted (<code>900215-01-5055</code>) and the <strong>date of birth and age are extracted automatically</strong> from the first six digits (century-aware). Passport numbers can be entered instead for non-Malaysians.</li>
+<li><strong>Department</strong> (pick from the list or add a new one), <strong>Job Title</strong>, <strong>Employment Type</strong> (FT Full-Time / PT Part-Time / TMP Temporary / INT Intern), <strong>Date Joined</strong>, <strong>Basic Salary (RM)</strong>, and <strong>Company</strong>.</li>
+</ul>
+
+<h3>Employee ID — auto or manual</h3>
+<p>Leave <strong>Auto-generate Employee ID?</strong> set to <strong>Y</strong> and PayFlow builds the ID as:</p>
+<div class="card" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px">
+{COMPANY PREFIX}{MM}{YY}{M/F}{0000}<br>
+<span style="color:var(--mut);font-size:12px">e.g.&nbsp; MEG0726F0012 &nbsp;→&nbsp; MyEden Group · joined 07/2026 · Female · running no. 12</span>
+</div>
+<p>The month/year come from the Date Joined. Choose <strong>N — Manual</strong> to type your own ID instead.</p>
+
+<h3>Employment status codes</h3>
+<table>
+<tr><th>Code</th><th>Meaning</th><th>Payroll behaviour</th></tr>
+<tr><td><code>UP</code></td><td>Under Probation</td><td>Included in payroll normally.</td></tr>
+<tr><td><code>CF</code></td><td>Confirmed</td><td>Included in payroll normally.</td></tr>
+<tr><td><code>R</code></td><td>Resigned</td><td>Still payable in the month containing the last working day (auto-prorated); excluded afterwards.</td></tr>
+<tr><td><code>TM</code></td><td>Terminated</td><td>Same handling as Resigned.</td></tr>
+</table>
+
+<h3>Bulk actions</h3>
+<p>Tick the checkboxes in the list to enable <span class="btnref">Delete Selected</span>, or use <span class="btnref">Delete All</span> to wipe the list. Both ask for confirmation.</p>
+<div class="note r"><strong>Deletion is permanent</strong> unless you have a backup. Make a backup before any bulk delete.</div>
+</section>
+
+<!-- ════════ 7. EMPLOYEE PROFILE ════════ -->
+<section id="profile">
+<h2><span class="no">7</span>Employee Profile — the 8 Tabs</h2>
+<p>Opening an employee shows their profile with eight tabs. Click <span class="btnref">Save</span> after editing; <span class="btnref">Back</span> returns to the list.</p>
+
+<div class="note b"><strong>Multi-company employees.</strong> An employee can be assigned to several companies. Company "pills" at the top of the profile let you pick which company's employment block you are viewing — the <strong>Employment, Separation, Salary</strong> tabs are <em>per company</em>, while Personal Info and Leave Management are shared across all companies.</div>
+
+<h3>7.1 · Personal Info</h3>
+<p>Name, Chinese name, NRIC/passport (with auto-DOB extraction), gender, date of birth, age, nationality, race, marital status, spouse name, address, contact number, email, emergency contacts (add as many as needed), and remarks.</p>
+
+<h3>7.2 · Employment</h3>
+<ul>
+<li>Company assignment (assign to / remove from companies), Employee ID (auto or manual), Department, Job Title, Employment Type.</li>
+<li><strong>Date Joined</strong>, <strong>Status</strong> (UP/CF/R/TM), <strong>Date Confirmed</strong>.</li>
+<li><strong>Working hours</strong> — <em>From</em>/<em>To</em> times and <em>Meal Duration</em> (minutes). These determine the actual working hours per day used in the overtime hourly-rate calculation.</li>
+<li><strong>OT Days divisor</strong> — the working-days figure (default 26) used to derive the daily rate: <code>daily rate = basic ÷ OT days</code>.</li>
+</ul>
+
+<h3>7.3 · Separation</h3>
+<p>Complete this tab only when an employee is leaving:</p>
+<ul>
+<li><strong>Resignation Letter Date</strong> — the day notice was tendered.</li>
+<li><strong>Notice period</strong> — auto-calculated from length of service using Employment Act s.12 defaults: <em>under 2 years → 4 weeks; 2–5 years → 6 weeks; 5 years and above → 8 weeks</em> (the in-app rule table is editable in the MYAL Calculator). The resulting <strong>Notice Period End Date</strong> and <strong>Resigned / Last Working Day</strong> are filled in automatically but remain manually editable.</li>
+</ul>
+<div class="note a"><strong>Set the last working day!</strong> A resigned/terminated employee with <em>no</em> last-working-day on record is flagged in payroll and is <strong>not auto-included</strong> — their final salary cannot be prorated without a date.</div>
+
+<h3>7.4 · Salary &amp; Statutory</h3>
+<ul>
+<li><strong>Salary history</strong> — every salary is a dated record with a <em>code</em>, <em>effective date</em>, <em>amount</em>, and <em>remark</em>. Add a new record for each increment; the payroll wizard lets you pick which salary code applies. The Employees list shows the <em>Last Increment</em> automatically.</li>
+<li><strong>Hourly flag</strong> — a salary record can be marked hourly (for part-timers). Payroll then asks for hours worked and computes <code>basic = rate × hours</code>.</li>
+<li><strong>Statutory numbers</strong> — employee's KWSP No., SOCSO No., Income Tax (TIN) No.</li>
+<li><strong>Bank details</strong> — Bank Name and Account No., printed on the payslip.</li>
+<li><strong>Contribution switches</strong> — per-employee opt-outs for EPF, SOCSO, and EIS, separately for the employee share and the employer share. Leave all ON for a normal employee.</li>
+<li><strong>First-time contributor aged 57+</strong> — an opt-in flag that exempts SOCSO/EIS for employees who first register after age 57, per PERKESO rules.</li>
+</ul>
+
+<h3>7.5 · Leave Management</h3>
+<p>Leave is <strong>shared across all companies</strong> — one balance per person.</p>
+<ul>
+<li><strong>Annual Leave entitlement</strong> — auto-set from service-length bands (Employment Act s.60E defaults): <em>first 2 years → 8 days; 2–5 years → 12 days; over 5 years → 16 days</em>. In the employee's first calendar year the entitlement is <strong>prorated from the join date</strong>. The auto value keeps itself up to date until you manually edit it, after which your figure is kept.</li>
+<li><strong>Brought Forward (BF)</strong> — days carried in from the previous year.</li>
+<li><strong>KPI bonus leave</strong> — extra AL granted by performance grade: <em>Unqualified 0 · Average 1 · Satisfactory 3 · Excellent 6 · Manual Entry (any figure)</em>.</li>
+<li><strong>Sick leave</strong> — default 14 days per year; <strong>Replacement leave</strong> — granted via payroll (see 8).</li>
+<li><strong>Usage ledger</strong> — leave taken is recorded monthly (through the payroll wizard's Leave step) and accumulates into <em>Used This Month / Used To Date / Balance</em> figures, which are printed on the payslip.</li>
+<li><strong>On resignation</strong> — once the employee has exited <em>all</em> companies, the entitlement is automatically <strong>prorated to the last working day</strong>, and any leave taken above the prorated entitlement can be converted to an unpaid-leave deduction in the final payroll.</li>
+</ul>
+
+<h3>7.6 · Allowances</h3>
+<p>Recurring or one-time payments added on top of basic salary:</p>
+<ul>
+<li>Each allowance has a <em>type/name</em>, <em>amount</em>, <em>recurring Y/N</em>, and optional <em>start date</em> and <em>expiry date</em> (an expired or not-yet-started recurring allowance is skipped automatically in payroll).</li>
+<li><strong>Statutory flags</strong> — mark whether the allowance is subject to <em>KWSP</em>, <em>SOCSO</em>, and <em>EIS</em>. These flags decide whether the amount is included in each contribution base.</li>
+</ul>
+
+<h3>7.7 · Other Income</h3>
+<p>The same structure as Allowances, for items such as commission or bonus, with its own KWSP-liability flag. Included in gross pay each payroll run.</p>
+
+<h3>7.8 · Data &amp; Backup</h3>
+<p>The in-profile backup panel shows the <strong>backup history</strong> (timestamp, employee count, size, remark, location) with actions to <em>view the raw JSON</em>, <em>download</em>, <em>restore</em>, or <em>clear all backups</em>. Automatic snapshots are also created before risky operations such as imports and restores.</p>
+</section>
+
+<!-- ════════ 8. RUN PAYROLL ════════ -->
+<section id="runpayroll">
+<h2><span class="no">8</span>Run Payroll — the Monthly Wizard</h2>
+<p>Open <span class="btnref">Run Payroll</span>. The wizard walks through seven stages; you can move back and forth without losing entries. It processes the <strong>active company</strong> only.</p>
+
+<div class="step"><div class="n">1</div><div class="b">
+<h4>Select Payroll Period</h4>
+<p>Choose the month/year (the last 12 months are offered). A banner previews how many employees will be included: all <strong>active</strong> employees, plus any <strong>resigned/terminated</strong> employees whose last working day falls inside this period ("resigned payable"). Resigned employees with <em>no</em> last-working-day date are listed but left unchecked, with a warning telling you to set the date in the Separation tab first.</p>
+</div></div>
+
+<div class="step"><div class="n">2</div><div class="b">
+<h4>Select Employees</h4>
+<p>Tick/untick who to include (a select-all control is provided). Each row shows the employee's latest salary code and amount.</p>
+</div></div>
+
+<div class="step"><div class="n">3</div><div class="b">
+<h4>Configure Salary, OT &amp; Deductions</h4>
+<p>Per employee, set:</p>
+<ul>
+<li><strong>Salary code</strong> — which salary-history record to pay (defaults to the latest).</li>
+<li><strong>OT hours</strong> — overtime pay is computed as <code>OT hours × hourly rate × 1.5</code>, where the hourly rate is <code>(basic ÷ OT days) ÷ actual daily working hours</code> derived from the profile's working hours minus meal break.</li>
+<li><strong>Part-time hours</strong> — for hourly-flagged salaries, the hours worked this month (<code>basic = rate × hours</code>).</li>
+<li><strong>Extra allowance / extra deduction</strong> — one-off amounts for this run only.</li>
+<li><strong>Proration — auto-detected.</strong> If the employee <em>joined</em> during this period, a new-joiner adjustment is pre-computed on a <strong>calendar-day basis</strong> and pre-ticked; if they <em>resigned</em> during this period, a resignation adjustment (paying only up to the last working day) is pre-computed likewise. Both amounts are editable and can be unticked.</li>
+</ul>
+</div></div>
+
+<div class="step"><div class="n">4</div><div class="b">
+<h4>Leave Entries</h4>
+<p>Record this month's leave per employee: <em>Replacement Leave Given</em>, <em>Annual Leave Taken</em>, <em>Compassionate</em>, <em>MC/Sick</em>, <em>Hospitalisation</em>, <em>Maternity</em>, <em>Paternity</em>, and <em>Unpaid Leave</em> days. The wizard warns if an entry would push usage over the entitlement. <strong>Unpaid leave is deducted from gross on a calendar-day basis</strong> (<code>basic ÷ calendar days in month × days</code>). For final-month resignees, any annual leave taken beyond the prorated entitlement is auto-detected as <em>excess AL</em> and offered for conversion to an unpaid deduction.</p>
+</div></div>
+
+<div class="step"><div class="n">5</div><div class="b">
+<h4>Statutory Review</h4>
+<p>The wizard shows the calculated EPF, SOCSO, and EIS contributions (employee and employer shares) for every person, using the official bracket tables and the employee's age at period end (see <a href="#statutory">Section 11</a>). Every figure is <strong>editable as a per-run override</strong> if you need to match an external calculation. <strong>PCB (monthly tax)</strong> is auto-estimated but <strong>only deducted if you tick its checkbox</strong> — it is OFF by default; the estimated figure is shown for reference and can also be overridden.</p>
+</div></div>
+
+<div class="step"><div class="n">6</div><div class="b">
+<h4>Review Summary</h4>
+<p>A full payroll register: per-employee Basic, OT Pay, Allowance, Other Income, Unpaid Leave, Gross, employee-share EPF/SOCSO/EIS/PCB, extra deductions, Net Pay — plus the employer-share columns and grand totals. Columns that are zero for everyone are hidden automatically to keep the table readable.</p>
+</div></div>
+
+<div class="step"><div class="n">7</div><div class="b">
+<h4>Payroll Complete — approve &amp; distribute</h4>
+<ul>
+<li><strong>Approving saves the payslips</strong> into the database (they then appear in the Payslips and Reports sections, and the month's leave entries are posted to each employee's ledger).</li>
+<li><strong>Download payslips</strong> — one by one, <strong>all as individual PDFs</strong>, or as a <strong>single combined PDF</strong>. Filenames default to <code>NAME_EMPID_PERIOD</code> and are editable before download.</li>
+<li><strong>Export the run</strong> — full payroll data as CSV or JSON for records or bank submission preparation.</li>
+</ul>
+</div></div>
+
+<div class="note g"><strong>Payslip contents.</strong> Each PDF payslip carries the company letterhead (logo, registration no., address), employee details (ID, NRIC, department, job title), the full earnings and deductions breakdown, employer contributions, net pay, bank details, and the employee's leave summary table for the month.</div>
+</section>
+
+<!-- ════════ 9. PAYSLIPS ════════ -->
+<section id="payslips">
+<h2><span class="no">9</span>Payslips</h2>
+<p>The Payslips screen lists every approved payslip for the <strong>active company</strong>, newest period first.</p>
+<ul>
+<li><strong>Filter</strong> — the period dropdown narrows the list to one month, or shows all.</li>
+<li><strong>View / Download</strong> — open any payslip on screen or download its PDF (a progress bar shows PDF rendering status).</li>
+<li><span class="btnref">Export CSV</span> / <span class="btnref">Export JSON</span> — export every listed payslip's data in one file for archiving or further processing in Excel.</li>
+</ul>
+<div class="note b">Payslips are tagged to the company that generated them — switch the active company to see another entity's payslips.</div>
+</section>
+
+<!-- ════════ 10. REPORTS ════════ -->
+<section id="reports">
+<h2><span class="no">10</span>Reports</h2>
+<p>Reports are built from approved payslips (run payroll at least once to see data):</p>
+<ul>
+<li><strong>Headline cards</strong> — Total Gross (YTD), Total Net Pay (YTD), Total EPF (employee + employer, YTD), Total PCB Tax (YTD).</li>
+<li><strong>Payroll by Period</strong> — gross, net, and payslip count per month.</li>
+<li><strong>Per-Employee Summary</strong> — cumulative gross, net, EPF, PCB, and months paid for every employee.</li>
+</ul>
+</section>
+
+<!-- ════════ 11. STATUTORY ════════ -->
+<section id="statutory">
+<h2><span class="no">11</span>Statutory Calculation Reference</h2>
+<p>This section explains exactly how PayFlow computes Malaysian statutory contributions, so you can verify any payslip figure.</p>
+
+<h3>Contribution bases</h3>
+<table>
+<tr><th>Contribution</th><th>Base used</th></tr>
+<tr><td>EPF / KWSP &amp; EIS</td><td>Basic (after proration) + OT pay + KWSP-flagged allowances + KWSP-flagged other income</td></tr>
+<tr><td>SOCSO</td><td>Basic (after proration) + OT pay + SOCSO-flagged allowances</td></tr>
+</table>
+
+<h3>Rules applied</h3>
+<table>
+<tr><th>Scheme</th><th>Rule</th></tr>
+<tr><td><strong>EPF (KWSP)</strong></td><td>Official bracket table lookup. Under 60: employee 11% / employer 12% pattern (table values). Age 60+: employee 0% / employer 4%. Above the RM20,000 table ceiling, the exact percentage is used and rounded <em>up</em> to the nearest ringgit. Applies at all ages.</td></tr>
+<tr><td><strong>SOCSO (PERKESO)</strong></td><td>Wages capped at <strong>RM6,000</strong>. Under 60: standard (Employment Injury + Invalidity) table, both shares. Age 60+: <strong>employer-only</strong> Injury-scheme table (employee share forced to zero). Applies from age 18. Exempt if the "first-time contributor aged 57+" flag is set.</td></tr>
+<tr><td><strong>EIS (SIP)</strong></td><td>Wages capped at <strong>RM6,000</strong>; employee and employer pay equal shares (0.2% pattern table). Applies ages 18–60 only; also exempt under the 57+ first-timer flag.</td></tr>
+<tr><td><strong>PCB (MTD)</strong></td><td>Simplified estimate: <code>annual chargeable = (gross − employee EPF) × 12</code>, run through the resident progressive rate scale (0% to RM5,000 … up to 25% above RM400,000), divided by 12. <strong>Deducted only when its checkbox is ticked in the Statutory step</strong> — off by default.</td></tr>
+</table>
+
+<p><strong>Age</strong> is always measured as at the <em>last day of the payroll month</em>, so an employee turning 60 mid-month is treated as 60 for that whole period.</p>
+
+<div class="note a"><strong>Verify before filing.</strong> PayFlow's tables follow the published KWSP/PERKESO schedules and a simplified PCB scale, but statutory rates change from time to time and the PCB figure is an <em>estimate</em>, not a substitute for LHDN's official MTD computation. Always cross-check against the current official tables (or your statutory portal figures) before submission, and use the per-run override fields to align if needed.</div>
+</section>
+
+<!-- ════════ 12. BACKUPS & IMPORT ════════ -->
+<section id="backup">
+<h2><span class="no">12</span>Data, Backups &amp; Google Drive</h2>
+
+<h3>How saving works</h3>
+<ul>
+<li>PayFlow <strong>auto-saves continuously</strong> to the browser's local storage — you rarely need to think about routine saving. The Dashboard indicator shows <em>Saved / Unsaved / Error</em> plus the last-saved time and location.</li>
+<li>Local storage is <strong>per browser, per computer</strong>. It survives closing the tab and restarting the PC, but not clearing browsing data, and it does not follow you to another device.</li>
+</ul>
+
+<h3>The Save Backup dialog</h3>
+<p>Click <span class="btnref">Save</span> on the Dashboard. Enter a <strong>remark</strong> (e.g. "Before July salary update"), then pick a location:</p>
+<table>
+<tr><th>Location</th><th>What you get</th></tr>
+<tr><td>Browser</td><td>A snapshot added to the in-app backup history (restorable from the Data &amp; Backup panel).</td></tr>
+<tr><td>Download — JSON</td><td>A complete database file (<code>payflow_backup_…​.json</code>) saved to your computer. This is the <strong>full-restore format</strong>.</td></tr>
+<tr><td>Download — CSV / Excel</td><td>The employee list in spreadsheet form (employees only — not a full restore file).</td></tr>
+<tr><td>Google Drive</td><td>The JSON backup uploaded to the shared MyEden Drive folder, retrievable from any PC.</td></tr>
+</table>
+
+<h3>Google Drive backup &amp; restore</h3>
+<ul>
+<li>The first time you save to or load from Drive, a <strong>Google sign-in popup</strong> appears — sign in with the authorised company account and allow access. (If nothing appears, check that your browser isn't blocking popups.)</li>
+<li><span class="btnref">Load from Drive</span> lists the JSON backups in the shared folder, newest first, with dates and sizes — pick one to restore.</li>
+<li>The Drive folder is pre-configured inside the app, so all authorised users share the same backup location.</li>
+</ul>
+
+<h3>Restoring</h3>
+<ul>
+<li><strong>From a file</strong> — Dashboard → Import JSON (or drag the file onto the drop zone).</li>
+<li><strong>From Drive</strong> — Dashboard → Load from Drive.</li>
+<li><strong>From history</strong> — Employee Profile → Data &amp; Backup tab → Restore on any snapshot.</li>
+</ul>
+<div class="note a">Restoring <strong>replaces the current database</strong> with the backup's contents. An automatic safety snapshot is taken first, but treat restores with care.</div>
+
+<div class="note g"><strong>Moving to a new PC:</strong> on the old PC, Save → Google Drive (or download JSON). On the new PC, open the app → Load from Drive (or Import JSON). Done.</div>
+</section>
+
+<!-- ════════ 13. MYAL ════════ -->
+<section id="myal">
+<h2><span class="no">13</span>MYAL Calculator</h2>
+<p>The MYAL Calculator (sidebar → Tools) computes <strong>annual leave entitlement</strong> and <strong>resignation notice periods</strong> under the Employment Act 1955. It has three tabs: <strong>Calculator</strong>, <strong>Employee Database</strong>, and <strong>Data Export</strong>.</p>
+
+<h3>13.1 · Calculator tab</h3>
+<ul>
+<li><strong>Pick an employee</strong> from the searchable name dropdown (or enter dates manually). Click <span class="btnref">Sync Employees</span> to pull the latest names and dates from the HR employee database.</li>
+<li><strong>Join Date + Resignation Letter Date</strong> — the notice period is auto-derived from length of service using the editable <strong>Notice Period Rules</strong> table (defaults per EA s.12: <em>&lt;2 years → 4 weeks · 2–5 years → 6 weeks · ≥5 years → 12 weeks</em>). The <em>Actual Notice End</em> and <em>Last Working Day</em> can be nudged with the −/+ steppers or typed directly; a reset returns to the auto value.</li>
+<li><strong>No resignation?</strong> Use the <em>Reference End Date</em> instead, with Quick Set buttons — <span class="btnref">End of Year</span>, <span class="btnref">Today</span>, or a <span class="btnref">Custom Range</span>.</li>
+<li><strong>AL Service Bands</strong> — the entitlement table (defaults per EA s.60E: <em>first 2 yrs → 8 days · 2–5 yrs → 12 days · ≥5 yrs → 16 days</em>) is fully editable: add, change, or remove bands.</li>
+<li>Click <span class="btnref">Calculate Annual Leave Entitlement</span> to see the total service period, the applicable band, and the (prorated, where applicable) leave entitlement.</li>
+</ul>
+
+<h3>13.2 · Employee Database tab</h3>
+<p>A lightweight roster synced from the HR system, with headline counts (Total / Active / Probation / Resigned), searchable table (name, join/confirm/resign dates, type, status, DOB, age, gender), plus <span class="btnref">Import Excel</span>, <span class="btnref">Export Excel</span>, <span class="btnref">Add Employee</span>, and <span class="btnref">Clear All</span>. Changes here auto-save to the browser.</p>
+
+<h3>13.3 · Data Export tab</h3>
+<ul>
+<li>Shows the MYAL storage details — record count, data size, and last-saved time. MYAL keeps its own cache under the key <code>myal_calc_cache</code>, separate from the main HR database at <code>myal_employee_db</code>.</li>
+<li><strong>Export</strong> — download the MYAL dataset as Excel or JSON; <strong>Import</strong> — load a JSON file.</li>
+<li><strong>Raw JSON view</strong> — inspect, copy, or paste-and-apply the raw data (advanced users only).</li>
+</ul>
+<div class="note b">MYAL always syncs <em>from</em> the HR database first when it loads, so the calculator reflects the latest employee records automatically. Its own edits stay in its cache and do not overwrite HR data.</div>
+</section>
+
+<!-- ════════ 14. FAQ ════════ -->
+<section id="faq">
+<h2><span class="no">14</span>Tips &amp; Troubleshooting</h2>
+<table>
+<tr><th style="width:38%">Problem</th><th>Fix</th></tr>
+<tr><td>The app looks outdated / a new feature is missing after an update</td><td>Hard refresh: <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">R</span> (Windows) or <span class="kbd">Cmd</span>+<span class="kbd">Shift</span>+<span class="kbd">R</span> (Mac). Check the version stamp at the bottom of the app sidebar.</td></tr>
+<tr><td>My employees have disappeared</td><td>Check you are in the right <strong>active company</strong> (sidebar switcher) — lists are scoped per company. Also confirm you are in the same browser/PC where the data was entered; if not, restore a backup (Section 12).</td></tr>
+<tr><td>PDF payslip download does nothing / fails</td><td>PDF generation needs an internet connection (libraries load from a CDN). Check the connection and retry; a progress bar should appear.</td></tr>
+<tr><td>The Google sign-in window never appears</td><td>Your browser is blocking popups for the site — allow popups for <code>calexcl.github.io</code> and retry.</td></tr>
+<tr><td>Google Drive shows no backups</td><td>Make sure you signed in with the authorised company Google account, and that at least one backup has been saved to Drive.</td></tr>
+<tr><td>A resigned employee is missing from payroll</td><td>Their <strong>last working day is not set</strong>. Open Profile → Separation and complete the dates, or tick them manually at the bottom of the payroll Step 2 list.</td></tr>
+<tr><td>A recurring allowance didn't appear in payroll</td><td>Check its start/expiry dates in Profile → Allowances — expired or future-dated allowances are skipped automatically.</td></tr>
+<tr><td>EPF/SOCSO figures differ from my portal calculation</td><td>Check the employee's age, the allowance statutory flags, and the contribution switches in Profile → Salary &amp; Statutory. If a legitimate difference remains, type the portal figure into the per-run override in the Statutory step.</td></tr>
+<tr><td>I cleared my browser data by mistake</td><td>Restore the most recent backup: Load from Drive or Import JSON. This is why regular backups matter.</td></tr>
+</table>
+
+<div class="note r"><strong>Never use incognito/private windows</strong> for real work — everything is discarded when the window closes.</div>
+</section>
+
+<!-- ════════ 15. ABOUT ════════ -->
+<section id="about">
+<h2><span class="no">15</span>About This Manual</h2>
+<div class="card">
+<table style="border:none;margin:0">
+<tr><td style="width:220px"><strong>Application</strong></td><td>PayFlow HR &amp; Payroll System (MyPRSys)</td></tr>
+<tr><td><strong>Live URL</strong></td><td><a href="https://calexcl.github.io/MyPRSys/" target="_blank" rel="noopener">https://calexcl.github.io/MyPRSys/</a></td></tr>
+<tr><td><strong>Repository</strong></td><td><a href="https://github.com/calexcl/MyPRSys" target="_blank" rel="noopener">github.com/calexcl/MyPRSys</a></td></tr>
+<tr><td><strong>App version documented</strong></td><td><span class="ver">v.2026.07.04-07:00</span></td></tr>
+<tr><td><strong>Manual version</strong></td><td><span class="ver">v.2026.07.04-07:00</span></td></tr>
+<tr><td><strong>Owner</strong></td><td>MyEden Group Sdn. Bhd. — internal use</td></tr>
+</table>
+</div>
+<p style="color:var(--mut);font-size:12px">This manual is a companion document to the application and should be updated whenever app features change. Statutory rules described in Section 11 reflect the tables built into the documented app version; always verify current rates with KWSP, PERKESO, and LHDN before statutory submissions.</p>
+</section>
+
+</div><!-- /main -->
+</div><!-- /wrap -->
+
+<script>
+// Scroll-spy: highlight the sidebar item for the section in view
+(function(){
+  const items=[...document.querySelectorAll('.nav-item')];
+  const map={}; items.forEach(a=>{ map[a.getAttribute('href').slice(1)]=a; });
+  const secs=[...document.querySelectorAll('section')];
+  function spy(){
+    let cur=secs[0].id;
+    for(const s of secs){ if(s.getBoundingClientRect().top<=90) cur=s.id; }
+    items.forEach(a=>a.classList.remove('active'));
+    if(map[cur]) map[cur].classList.add('active');
+  }
+  document.addEventListener('scroll',spy,{passive:true});
+  spy();
+  // Close mobile menu on nav click
+  items.forEach(a=>a.addEventListener('click',()=>document.querySelector('.sidebar').classList.remove('open')));
+})();
+</script>
+</body>
+</html>
