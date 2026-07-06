@@ -9,8 +9,8 @@
 <title>PayFlow HR &amp; Payroll System — User Manual</title>
 <!-- ═══════════════════════════════════════════════════════════════
      PayFlow HR & Payroll System — User Manual (English)
-     Manual Version : v.2026.07.04-23:30  (UVN)
-     Documents App  : PayFlow v.2026.07.04-23:30
+     Manual Version : v.2026.07.06-00:45  (UVN)
+     Documents App  : PayFlow v.2026.07.06-00:45
      Live App       : https://calexcl.github.io/MyPRSys/
      © MyEden Group Sdn. Bhd.
      ═══════════════════════════════════════════════════════════════ -->
@@ -126,8 +126,9 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
   <div class="nav-sec">Data &amp; Tools</div>
   <a class="nav-item" href="#backup">12 · Backups &amp; Import</a>
   <a class="nav-item" href="#myal">13 · MYAL Calculator</a>
-  <a class="nav-item" href="#faq">14 · Troubleshooting</a>
-  <a class="nav-item" href="#about">15 · About</a>
+  <a class="nav-item" href="#settings">14 · Settings</a>
+  <a class="nav-item" href="#faq">15 · Troubleshooting</a>
+  <a class="nav-item" href="#about">16 · About</a>
 
   <div class="side-foot">
     <a class="gh" href="https://github.com/calexcl/MyPRSys" target="_blank" rel="noopener">
@@ -135,7 +136,7 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
       calexcl/MyPRSys
     </a>
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div class="ver">v.2026.07.04-23:30</div>
+    <div class="ver">v.2026.07.06-00:45</div>
   </div>
 </aside>
 
@@ -143,7 +144,7 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <div class="main">
 
 <h1>PayFlow HR &amp; Payroll System</h1>
-<div class="sub">Complete User Manual · English · Documents app version <span class="ver">v.2026.07.04-23:30</span></div>
+<div class="sub">Complete User Manual · English · Documents app version <span class="ver">v.2026.07.06-00:45</span></div>
 <div class="sub">Live app: <a href="https://calexcl.github.io/MyPRSys/" target="_blank" rel="noopener">https://calexcl.github.io/MyPRSys/</a></div>
 
 <!-- ════════ 1. INTRODUCTION ════════ -->
@@ -340,7 +341,7 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <li>Company assignment (assign to / remove from companies), Employee ID (auto or manual), Department, Job Title, Employment Type.</li>
 <li><strong>Date Joined</strong>, <strong>Status</strong> (UP/CF/R/TM), <strong>Date Confirmed</strong>.</li>
 <li><strong>Working hours</strong> — <em>From</em>/<em>To</em> times and <em>Meal Duration</em> (minutes). These determine the actual working hours per day used in the overtime hourly-rate calculation.</li>
-<li><strong>OT Days divisor</strong> — the working-days figure (default 26) used to derive the daily rate: <code>daily rate = basic ÷ OT days</code>.</li>
+<li><strong>OT Days divisor</strong> — <em>legacy field</em>: overtime now uses the global divisors in <a href="#settings">Settings → OT Calculation Method</a> (default 26 days ÷ 8 hours); this per-employee figure is no longer used by the OT engine.</li>
 </ul>
 
 <h3>7.3 · Separation</h3>
@@ -368,6 +369,7 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <li><strong>Brought Forward (BF)</strong> — days carried in from the previous year.</li>
 <li><strong>KPI bonus leave</strong> — extra AL granted by performance grade: <em>Unqualified 0 · Average 1 · Satisfactory 3 · Excellent 6 · Manual Entry (any figure)</em>.</li>
 <li><strong>Sick leave</strong> — default 14 days per year; <strong>Replacement leave</strong> — granted via payroll (see 8).</li>
+<li><strong>AL Buyback</strong> — days bought back through payroll (Step 3) are posted to the ledger as used on approval, reducing the balance.</li>
 <li><strong>Usage ledger</strong> — leave taken is recorded monthly (through the payroll wizard's Leave step) and accumulates into <em>Used This Month / Used To Date / Balance</em> figures, which are printed on the payslip.</li>
 <li><strong>On resignation</strong> — once the employee has exited <em>all</em> companies, the entitlement is automatically <strong>prorated to the last working day</strong>, and any leave taken above the prorated entitlement can be converted to an unpaid-leave deduction in the final payroll.</li>
 </ul>
@@ -403,11 +405,12 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 
 <div class="step"><div class="n">3</div><div class="b">
 <h4>Configure Salary, OT &amp; Deductions</h4>
-<p>Per employee, set:</p>
+<p>Employees are listed <strong>alphabetically</strong>, and the name column <strong>stays frozen on the left</strong> while the row scrolls horizontally on smaller screens. Per employee, set:</p>
 <ul>
 <li><strong>Salary code</strong> — which salary-history record to pay (defaults to the latest).</li>
-<li><strong>OT hours</strong> — overtime pay is computed as <code>OT hours × hourly rate × 1.5</code>, where the hourly rate is <code>(basic ÷ OT days) ÷ actual daily working hours</code> derived from the profile's working hours minus meal break.</li>
-<li><strong>Part-time hours</strong> — for hourly-flagged salaries, the hours worked this month (<code>basic = rate × hours</code>).</li>
+<li><strong>OT hours — three columns:</strong> <em>OT Normal</em>, <em>OT Rest</em> (rest day), and <em>OT PH</em> (public holiday). OT pay = hours × OT hourly rate × the multiplier for that category (defaults ×1.5 / ×2.0 / ×3.0). The OT hourly rate is <strong>payable basic ÷ 26 ÷ 8</strong> for monthly-rated staff, or the <strong>actual hourly rate</strong> for hourly-rated (PT) staff. Divisors and multipliers are editable in <a href="#settings">Settings</a>. A live blue line under the row shows the rate and the computed OT amount as you type.</li>
+<li><strong>PT hours</strong> — for hourly-flagged salaries, the hours worked this month. The earned salary (<code>rate × hours</code>) is calculated and displayed <strong>live below the row</strong> as you type — e.g. <em>PT: 120 hrs × RM10.00/hr = RM1,200.00</em>.</li>
+<li><strong>AL Buyback (days)</strong> — pays out unused annual leave. Daily rate = <strong>basic ÷ calendar days of the payroll month</strong>; the computed amount (days × daily rate) is shown live below the row. On approval the bought-back days are posted to the employee's AL ledger as used, so the balance reduces accordingly. Statutory treatment follows the "Annual Leave Buyback" entry in the Payment Types register.</li>
 <li><strong>Extra allowance / extra deduction</strong> — one-off amounts for this run only.</li>
 <li><strong>Proration — auto-detected.</strong> If the employee <em>joined</em> during this period, a new-joiner adjustment is pre-computed on a <strong>calendar-day basis</strong> and pre-ticked; if they <em>resigned</em> during this period, a resignation adjustment (paying only up to the last working day) is pre-computed likewise. Both amounts are editable and can be unticked.</li>
 </ul>
@@ -420,7 +423,7 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 
 <div class="step"><div class="n">5</div><div class="b">
 <h4>Statutory Review</h4>
-<p>The wizard shows the calculated EPF, SOCSO, and EIS contributions (employee and employer shares) for every person, using the official bracket tables and the employee's age at period end (see <a href="#statutory">Section 11</a>). Every figure is <strong>editable as a per-run override</strong> if you need to match an external calculation. <strong>PCB (monthly tax)</strong> is auto-estimated but <strong>only deducted if you tick its checkbox</strong> — it is OFF by default; the estimated figure is shown for reference and can also be overridden.</p>
+<p>The wizard shows the calculated EPF, SOCSO, and EIS contributions (employee and employer shares) for every person, using the official bracket tables and the employee's age at period end (see <a href="#statutory">Section 11</a>). Under each EPF/SOCSO/EIS/PCB figure, a small grey line shows the <strong>wage base</strong> that figure was computed from (for PCB, the monthly chargeable amount), so every number is verifiable at a glance. Every figure is <strong>editable as a per-run override</strong> if you need to match an external calculation. <strong>PCB (monthly tax)</strong> is auto-estimated but <strong>only deducted if you tick its checkbox</strong> — it is OFF by default; the estimated figure is shown for reference and can also be overridden.</p>
 </div></div>
 
 <div class="step"><div class="n">6</div><div class="b">
@@ -471,8 +474,8 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <h3>Contribution bases</h3>
 <table>
 <tr><th>Contribution</th><th>Base used</th></tr>
-<tr><td>EPF / KWSP &amp; EIS</td><td>Basic (after proration) + OT pay + KWSP-flagged allowances + KWSP-flagged other income</td></tr>
-<tr><td>SOCSO</td><td>Basic (after proration) + OT pay + SOCSO-flagged allowances</td></tr>
+<tr><td>EPF / SOCSO / EIS</td><td>Basic (after proration) + each OT category, AL Buyback, allowance, and other-income item <em>unless</em> its Payment Type is ticked exempt for that fund (see <a href="#settings">Section 14</a>); items with no matching Payment Type follow their per-item profile flags.</td></tr>
+<tr><td>PCB (chargeable)</td><td>Gross minus all PCB-exempt amounts, minus employee EPF.</td></tr>
 </table>
 
 <h3>Rules applied</h3>
@@ -555,9 +558,44 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <div class="note b">MYAL always syncs <em>from</em> the HR database first when it loads, so the calculator reflects the latest employee records automatically. Its own edits stay in its cache and do not overwrite HR data.</div>
 </section>
 
-<!-- ════════ 14. FAQ ════════ -->
+<!-- ════════ 14. SETTINGS ════════ -->
+<section id="settings">
+<h2><span class="no">14</span>Settings</h2>
+<p>The <span class="btnref">Settings</span> menu (sidebar, above Tools) controls system-wide payroll behaviour. Everything here is stored in the same database as your employees, so it is included in every backup and Drive restore.</p>
+
+<h3>14.1 · Payment Types register</h3>
+<p>A maintenance table of every payment kind the payroll can pay — overtime categories, Annual Leave Buyback, allowances, incentives, commission, bonus, and any custom types you add. Each type carries four tick-boxes:</p>
+<table>
+<tr><th>Tick-box</th><th>Effect when ticked</th></tr>
+<tr><td><strong>EPF exempt</strong></td><td>Amounts of this type are excluded from the EPF contribution base.</td></tr>
+<tr><td><strong>SOCSO exempt</strong></td><td>Excluded from the SOCSO contribution base.</td></tr>
+<tr><td><strong>EIS exempt</strong></td><td>Excluded from the EIS contribution base.</td></tr>
+<tr><td><strong>PCB exempt</strong></td><td>Excluded from the monthly tax (PCB) chargeable amount.</td></tr>
+</table>
+<ul>
+<li><strong>All boxes default to unticked</strong> — every payment type is fully subject to statutory contributions unless you deliberately exempt it.</li>
+<li><strong>System types</strong> (Overtime Normal / Rest Day / Public Holiday, Annual Leave Buyback) are built into the calculation engine — their exemption ticks work like any other, but they cannot be deleted.</li>
+<li><strong>Add your own types</strong> with the add button; custom types can be renamed or deleted at any time.</li>
+<li><strong>Precedence rule:</strong> when a payment type here matches an employee-profile allowance or other-income item <em>by name</em>, these Settings ticks override the older per-item KWSP/SOCSO/EIS flags in the profile. Items with no matching type keep their per-item flags, so old data keeps working unchanged.</li>
+</ul>
+
+<h3>14.2 · OT Calculation Method</h3>
+<p>The overtime engine is fully editable here:</p>
+<table>
+<tr><th>Setting</th><th>Default</th><th>Meaning</th></tr>
+<tr><td>Divisor — days</td><td>26</td><td rowspan="2">OT hourly rate = payable basic salary ÷ days ÷ hours. Monthly-rated staff only; hourly-rated (PT) staff always use their actual hourly rate.</td></tr>
+<tr><td>Divisor — hours</td><td>8</td></tr>
+<tr><td>Normal day multiplier</td><td>×1.5</td><td rowspan="3">Applied to the OT hourly rate for hours entered in the corresponding Step 3 column. Defaults follow Employment Act 1955 rates.</td></tr>
+<tr><td>Rest day multiplier</td><td>×2.0</td></tr>
+<tr><td>Public holiday multiplier</td><td>×3.0</td></tr>
+</table>
+<div class="note b"><strong>Worked example</strong> — basic RM2,600: OT rate = 2,600 ÷ 26 ÷ 8 = RM12.50/hr. An employee with 4 normal + 2 rest-day OT hours earns 4×12.50×1.5 + 2×12.50×2.0 = RM75.00 + RM50.00 = <strong>RM125.00</strong>.</div>
+<div class="note a">The per-employee "OT Days divisor" field in Profile → Employment is <strong>legacy</strong> — the Settings divisor now governs all OT calculations globally.</div>
+</section>
+
+<!-- ════════ 15. FAQ ════════ -->
 <section id="faq">
-<h2><span class="no">14</span>Tips &amp; Troubleshooting</h2>
+<h2><span class="no">15</span>Tips &amp; Troubleshooting</h2>
 <table>
 <tr><th style="width:38%">Problem</th><th>Fix</th></tr>
 <tr><td>The app looks outdated / a new feature is missing after an update</td><td>Hard refresh: <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">R</span> (Windows) or <span class="kbd">Cmd</span>+<span class="kbd">Shift</span>+<span class="kbd">R</span> (Mac). Check the version stamp at the bottom of the app sidebar.</td></tr>
@@ -576,14 +614,14 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 
 <!-- ════════ 15. ABOUT ════════ -->
 <section id="about">
-<h2><span class="no">15</span>About This Manual</h2>
+<h2><span class="no">16</span>About This Manual</h2>
 <div class="card">
 <table style="border:none;margin:0">
 <tr><td style="width:220px"><strong>Application</strong></td><td>PayFlow HR &amp; Payroll System (MyPRSys)</td></tr>
 <tr><td><strong>Live URL</strong></td><td><a href="https://calexcl.github.io/MyPRSys/" target="_blank" rel="noopener">https://calexcl.github.io/MyPRSys/</a></td></tr>
 <tr><td><strong>Repository</strong></td><td><a href="https://github.com/calexcl/MyPRSys" target="_blank" rel="noopener">github.com/calexcl/MyPRSys</a></td></tr>
-<tr><td><strong>App version documented</strong></td><td><span class="ver">v.2026.07.04-23:30</span></td></tr>
-<tr><td><strong>Manual version</strong></td><td><span class="ver">v.2026.07.04-23:30</span></td></tr>
+<tr><td><strong>App version documented</strong></td><td><span class="ver">v.2026.07.06-00:45</span></td></tr>
+<tr><td><strong>Manual version</strong></td><td><span class="ver">v.2026.07.06-00:45</span></td></tr>
 <tr><td><strong>Owner</strong></td><td>MyEden Group Sdn. Bhd. — internal use</td></tr>
 </table>
 </div>
