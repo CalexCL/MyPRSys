@@ -9,8 +9,8 @@
 <title>PayFlow HR &amp; Payroll System — User Manual</title>
 <!-- ═══════════════════════════════════════════════════════════════
      PayFlow HR & Payroll System — User Manual (English)
-     Manual Version : v.2026.07.06-17:00  (UVN)
-     Documents App  : PayFlow v.2026.07.06-17:00
+     Manual Version : MyPRSys v2026.07.22-20:00  (UVN)
+     Documents App  : PayFlow MyPRSys v2026.07.22-20:00
      Live App       : https://calexcl.github.io/MyPRSys/
      © MyEden Group Sdn. Bhd.
      ═══════════════════════════════════════════════════════════════ -->
@@ -136,7 +136,7 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
       calexcl/MyPRSys
     </a>
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div class="ver">v.2026.07.06-17:00</div>
+    <div class="ver">MyPRSys v2026.07.22-20:00</div>
   </div>
 </aside>
 
@@ -144,7 +144,7 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <div class="main">
 
 <h1>PayFlow HR &amp; Payroll System</h1>
-<div class="sub">Complete User Manual · English · Documents app version <span class="ver">v.2026.07.06-17:00</span></div>
+<div class="sub">Complete User Manual · English · Documents app version <span class="ver">MyPRSys v2026.07.22-20:00</span></div>
 <div class="sub">Live app: <a href="https://calexcl.github.io/MyPRSys/" target="_blank" rel="noopener">https://calexcl.github.io/MyPRSys/</a></div>
 
 <!-- ════════ 1. INTRODUCTION ════════ -->
@@ -167,9 +167,10 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 
 <h3>How the app is built (useful to know)</h3>
 <ul>
-<li>PayFlow is a <strong>single self-contained web page</strong> hosted on GitHub Pages. There is no server and no login — it runs entirely inside your browser.</li>
-<li>All data is stored <strong>locally in the browser</strong> you use (see <a href="#backup">Section 12</a> for what this means and how to move data between PCs).</li>
-<li>An internet connection is needed to open the page, generate PDF payslips (the PDF libraries load from a CDN), and use Google Drive backup. Everything else works once the page is loaded.</li>
+<li>PayFlow is a <strong>single self-contained web page</strong> hosted on GitHub Pages. There is no custom application server — the page talks directly to <strong>Supabase</strong> (a managed backend) for sign-in and, from Phase 2 onward, for data storage.</li>
+<li><strong>Sign-in is required.</strong> Every user needs an account, approved by an admin, before they can see any data — see <a href="#signin">Section 2.1</a>.</li>
+<li>All data is currently still stored <strong>locally in the browser</strong> you use (see <a href="#backup">Section 12</a> for what this means and how to move data between PCs). This is expected to move to Supabase in a later phase.</li>
+<li>An internet connection is needed to open the page, sign in, generate PDF payslips (the PDF libraries load from a CDN), and use Google Drive backup. Everything else works once the page is loaded.</li>
 </ul>
 </section>
 
@@ -181,6 +182,16 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <h4>Open the app</h4>
 <p>Go to <a href="https://calexcl.github.io/MyPRSys/" target="_blank" rel="noopener">https://calexcl.github.io/MyPRSys/</a> in a desktop browser. <strong>Google Chrome or Microsoft Edge on a PC is recommended</strong> — payroll tables and PDF generation are designed for a large screen.</p>
 </div></div>
+
+<div id="signin" class="note a">
+<strong>Signing in.</strong> PayFlow now requires an account. The first time you open the app you'll see a Log In / Sign Up screen:
+<ul>
+<li><strong>New user?</strong> Click "Sign up," enter your name, work email, and a password (typed twice, to confirm it — use the eye icon in the password fields to check what you typed before submitting). Your account is created immediately, but you'll land on an "Awaiting Approval" screen — you have no access yet.</li>
+<li><strong>An admin must approve you.</strong> An admin opens <span class="btnref">Settings → User Management</span>, finds your account, ticks the sections you should be able to see (Employees, Run Payroll, Payslips, Reports, Companies, Settings, MYAL Calculator), sets your status to Active, and saves. Reload the app and you're in.</li>
+<li><strong>Returning user?</strong> Just log in with your email and password. Your sidebar will only show the sections an admin has enabled for you.</li>
+<li>Use <span class="btnref">Sign Out</span> at the bottom of the sidebar to log out, e.g. on a shared computer.</li>
+</ul>
+</div>
 
 <div class="step"><div class="n">2</div><div class="b">
 <h4>Set up your companies first</h4>
@@ -331,14 +342,14 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <h2><span class="no">7</span>Employee Profile — the 8 Tabs</h2>
 <p>Opening an employee shows their profile with eight tabs. Click <span class="btnref">Save</span> after editing; <span class="btnref">Back</span> returns to the list.</p>
 
-<div class="note b"><strong>Multi-company employees.</strong> An employee can be assigned to several companies. Company "pills" at the top of the profile let you pick which company's employment block you are viewing — the <strong>Employment, Separation, Salary</strong> tabs are <em>per company</em>, while Personal Info and Leave Management are shared across all companies.</div>
+<div class="note b"><strong>Multi-company employees.</strong> An employee can be assigned to several companies. Company "pills" at the top of the profile let you pick which company's employment block you are viewing — the <strong>Employment, Separation, Salary</strong> tabs are <em>per company</em>, while Personal Info, Leave Management, and the <strong>Employee ID</strong> are shared across all companies (the ID is generated once when the person is first created and does not change when they're later assigned to additional companies).</div>
 
 <h3>7.1 · Personal Info</h3>
 <p>Name, Chinese name, NRIC/passport (with auto-DOB extraction), gender, date of birth, age, nationality, race, marital status, spouse name, address, contact number, email, emergency contacts (add as many as needed), and remarks.</p>
 
 <h3>7.2 · Employment</h3>
 <ul>
-<li>Company assignment (assign to / remove from companies), Employee ID (auto or manual), Department, Job Title, Employment Type.</li>
+<li>Company assignment (assign to / remove from companies), Department, Job Title, Employment Type.</li>
 <li><strong>Date Joined</strong>, <strong>Status</strong> (UP/CF/R/TM), <strong>Date Confirmed</strong>.</li>
 <li><strong>Working hours</strong> — <em>From</em>/<em>To</em> times and <em>Meal Duration</em> (minutes). These determine the actual working hours per day used in the overtime hourly-rate calculation.</li>
 <li><strong>OT Days divisor</strong> — <em>legacy field</em>: overtime now uses the global divisors in <a href="#settings">Settings → OT Calculation Method</a> (default 26 days ÷ 8 hours); this per-employee figure is no longer used by the OT engine.</li>
@@ -378,11 +389,12 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <p>Recurring or one-time payments added on top of basic salary:</p>
 <ul>
 <li>Each allowance has a <em>type/name</em>, <em>amount</em>, <em>recurring Y/N</em>, and optional <em>start date</em> and <em>expiry date</em> (an expired or not-yet-started recurring allowance is skipped automatically in payroll).</li>
-<li><strong>Statutory flags</strong> — mark whether the allowance is subject to <em>KWSP</em>, <em>SOCSO</em>, and <em>EIS</em>. These flags decide whether the amount is included in each contribution base.</li>
+<li><strong>Statutory flags</strong> — mark whether the allowance is subject to <em>KWSP</em>, <em>SOCSO</em>, <em>EIS</em>, and <strong>PCB</strong>. These flags decide whether the amount is included in each contribution/tax base.</li>
+<li><strong>PCB flag</strong> — controls whether the allowance counts toward the monthly tax (PCB) chargeable amount. Defaults to <em>Y — chargeable</em>, matching how every allowance behaved before this control existed, so nothing changes for existing records unless you explicitly set one to <em>N — exempt</em>. If a <a href="#settings">Payment Type</a> of the same name has its own PCB-exempt tick in Settings, that registry setting takes priority over this per-item flag.</li>
 </ul>
 
 <h3>7.7 · Other Income</h3>
-<p>The same structure as Allowances, for items such as commission or bonus, with its own KWSP-liability flag. Included in gross pay each payroll run.</p>
+<p>The same structure as Allowances, including the KWSP/SOCSO/EIS/PCB flags described above. Included in gross pay each payroll run.</p>
 
 <h3>7.8 · Data &amp; Backup</h3>
 <p>The in-profile backup panel shows the <strong>backup history</strong> (timestamp, employee count, size, remark, location) with actions to <em>view the raw JSON</em>, <em>download</em>, <em>restore</em>, or <em>clear all backups</em>. Automatic snapshots are also created before risky operations such as imports and restores.</p>
@@ -591,6 +603,17 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 </table>
 <div class="note b"><strong>Worked example</strong> — basic RM2,600: OT rate = 2,600 ÷ 26 ÷ 8 = RM12.50/hr. An employee with 4 normal + 2 rest-day OT hours earns 4×12.50×1.5 + 2×12.50×2.0 = RM75.00 + RM50.00 = <strong>RM125.00</strong>.</div>
 <div class="note a">The per-employee "OT Days divisor" field in Profile → Employment is <strong>legacy</strong> — the Settings divisor now governs all OT calculations globally.</div>
+
+<h3>14.3 · User Management</h3>
+<p>Visible to admins only. Lists everyone who has ever signed up, with controls for:</p>
+<table>
+<tr><th>Control</th><th>Effect</th></tr>
+<tr><td>Role</td><td><strong>Staff</strong> or <strong>Admin</strong>. Admins implicitly have every module enabled (their permission checkboxes are disabled/ignored) and are the only ones who can see this User Management screen.</td></tr>
+<tr><td>Status</td><td><strong>Pending</strong> (just signed up, no access yet) · <strong>Active</strong> (can log in and use the app) · <strong>Disabled</strong> (existing account, access revoked).</td></tr>
+<tr><td>Module checkboxes</td><td>One per sidebar section — Dashboard, Employees, Run Payroll, Payslips, Reports, Companies, Settings, MYAL Calculator. Only ticked sections appear in that user's sidebar; direct attempts to open an unticked section are blocked.</td></tr>
+</table>
+<div class="note a">Changes save immediately per row — there's no separate "Save all" step. The list refreshes after each save.</div>
+<div class="note r"><strong>Bootstrap admin.</strong> The account that signs up with the email designated as the system's first admin is automatically approved as Admin with full access the moment it signs up — no one needs to approve the very first user. Every other sign-up starts Pending with zero access.</div>
 </section>
 
 <!-- ════════ 15. FAQ ════════ -->
@@ -598,6 +621,8 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <h2><span class="no">15</span>Tips &amp; Troubleshooting</h2>
 <table>
 <tr><th style="width:38%">Problem</th><th>Fix</th></tr>
+<tr><td>I signed up but the app just shows "Awaiting Approval"</td><td>This is expected — new accounts start with zero access. Ask an admin to open <strong>Settings → User Management</strong>, tick the sections you need, set your status to Active, and save. You'll get in on your next reload.</td></tr>
+<tr><td>I forgot my password</td><td>There is no in-app "forgot password" flow yet — ask your admin to reset it from the Supabase dashboard, or sign up again with a different password if you never completed sign-up.</td></tr>
 <tr><td>The app looks outdated / a new feature is missing after an update</td><td>Hard refresh: <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">R</span> (Windows) or <span class="kbd">Cmd</span>+<span class="kbd">Shift</span>+<span class="kbd">R</span> (Mac). Check the version stamp at the bottom of the app sidebar.</td></tr>
 <tr><td>My employees have disappeared</td><td>Check you are in the right <strong>active company</strong> (sidebar switcher) — lists are scoped per company. Also confirm you are in the same browser/PC where the data was entered; if not, restore a backup (Section 12).</td></tr>
 <tr><td>PDF payslip download does nothing / fails</td><td>PDF generation needs an internet connection (libraries load from a CDN). Check the connection and retry; a progress bar should appear.</td></tr>
@@ -620,8 +645,8 @@ hr.sp{border:none;border-top:1px dashed var(--line);margin:20px 0}
 <tr><td style="width:220px"><strong>Application</strong></td><td>PayFlow HR &amp; Payroll System (MyPRSys)</td></tr>
 <tr><td><strong>Live URL</strong></td><td><a href="https://calexcl.github.io/MyPRSys/" target="_blank" rel="noopener">https://calexcl.github.io/MyPRSys/</a></td></tr>
 <tr><td><strong>Repository</strong></td><td><a href="https://github.com/calexcl/MyPRSys" target="_blank" rel="noopener">github.com/calexcl/MyPRSys</a></td></tr>
-<tr><td><strong>App version documented</strong></td><td><span class="ver">v.2026.07.06-17:00</span></td></tr>
-<tr><td><strong>Manual version</strong></td><td><span class="ver">v.2026.07.06-17:00</span></td></tr>
+<tr><td><strong>App version documented</strong></td><td><span class="ver">MyPRSys v2026.07.22-20:00</span></td></tr>
+<tr><td><strong>Manual version</strong></td><td><span class="ver">MyPRSys v2026.07.22-20:00</span></td></tr>
 <tr><td><strong>Owner</strong></td><td>MyEden Group Sdn. Bhd. — internal use</td></tr>
 </table>
 </div>
