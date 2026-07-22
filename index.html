@@ -321,7 +321,7 @@ input[type=file]{display:none}
       <a onclick="signOutUser()" style="cursor:pointer;color:#991b1b;font-size:9px;font-weight:600;flex-shrink:0">Sign Out</a>
     </div>
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.22-19:00</div>
+    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.22-20:00</div>
   </div>
 </aside>
 
@@ -2886,7 +2886,10 @@ function computePayslip(emp, opts){
     if(base==='epf')   return item.kwsp==='Y';
     if(base==='socso') return item.socso==='Y';
     if(base==='eis')   return (item.eis!==undefined && item.eis!=='') ? item.eis==='Y' : item.kwsp==='Y';
-    return true; // pcb: legacy items carry no PCB flag → chargeable
+    // pcb: per-item flag if the item has one explicitly set; legacy items with no
+    // pcb field (added before this control existed) default to chargeable, same as before.
+    if(base==='pcb')   return (item.pcb!==undefined && item.pcb!=='') ? item.pcb==='Y' : true;
+    return true;
   };
   const otFor = (base) => (payTypeByKey('otNormal')[base+'Exempt']?0:otPayN)
                         + (payTypeByKey('otRest')[base+'Exempt']?0:otPayR)
@@ -5677,7 +5680,12 @@ function upContact(i,k,v){ const e=getE(curEmpId); if(e&&e.contacts[i]) e.contac
 function pNRICChange(v){
   const e=getE(curEmpId); if(!e) return;
   e.nric=v; const dob=nricToDOB(v); e.dob=dob; e.age=calcAge(dob);
-  e.socsoNo=v.replace(/-/g,'');
+  const socso=v.replace(/-/g,'');
+  e.socsoNo=socso;
+  // Cascade into every per-company employment block too — previously only the
+  // top-level flat field was updated here, leaving companies[] blocks (the data
+  // the payroll engine actually reads) silently stale after an NRIC correction.
+  if(Array.isArray(e.companies)) e.companies.forEach(c=>{ c.socsoNo=socso; });
   const d=document.getElementById('p-dob'), a=document.getElementById('p-age');
   if(d&&dob) d.value=dob; if(a&&e.age!=='') a.value=e.age;
 }
@@ -6396,7 +6404,8 @@ function openAddAllow(){
       <div class="fg-item span2"><label>Remarks / Notes</label><input id="ea-remark" placeholder="Optional"></div>
       <div class="fg-item"><label>KWSP Contribution?</label><select id="ea-kwsp"><option value="Y">Y — Yes</option><option value="N">N — No</option></select></div>
       <div class="fg-item"><label>SOCSO Contribution?</label><select id="ea-socso"><option value="Y">Y — Yes</option><option value="N">N — No</option></select></div>
-      <div class="fg-item span2"><label>EIS Contribution?</label><select id="ea-eis"><option value="Y">Y — Yes</option><option value="N">N — No</option></select></div>
+      <div class="fg-item"><label>EIS Contribution?</label><select id="ea-eis"><option value="Y">Y — Yes</option><option value="N">N — No</option></select></div>
+      <div class="fg-item"><label>PCB Chargeable?</label><select id="ea-pcb"><option value="Y">Y — Yes</option><option value="N">N — No (exempt)</option></select></div>
     </div>
     <div style="border-top:1px solid rgba(0,0,0,0.08);margin:14px 0;padding-top:14px">
       <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Recurring Payment</div>
@@ -6434,6 +6443,7 @@ function openAddAllow(){
       kwsp:document.getElementById('ea-kwsp').value,
       socso:document.getElementById('ea-socso').value,
       eis:document.getElementById('ea-eis').value,
+      pcb:document.getElementById('ea-pcb').value,
       remark:document.getElementById('ea-remark').value,
       recurring:recVal,
       startDate:recVal==='Y'?document.getElementById('ea-start').value:'',
@@ -6457,7 +6467,8 @@ function openEditAllow(i){
       <div class="fg-item span2"><label>Remarks</label><input id="eea-remark" value="${h(a.remark||'')}"></div>
       <div class="fg-item"><label>KWSP?</label><select id="eea-kwsp"><option value="Y"${a.kwsp==='Y'?' selected':''}>Y — Yes</option><option value="N"${a.kwsp==='N'?' selected':''}>N — No</option></select></div>
       <div class="fg-item"><label>SOCSO?</label><select id="eea-socso"><option value="Y"${a.socso==='Y'?' selected':''}>Y — Yes</option><option value="N"${a.socso==='N'?' selected':''}>N — No</option></select></div>
-      <div class="fg-item span2"><label>EIS?</label><select id="eea-eis"><option value="Y"${a.eis==='Y'?' selected':''}>Y — Yes</option><option value="N"${a.eis==='N'?' selected':''}>N — No</option></select></div>
+      <div class="fg-item"><label>EIS?</label><select id="eea-eis"><option value="Y"${a.eis==='Y'?' selected':''}>Y — Yes</option><option value="N"${a.eis==='N'?' selected':''}>N — No</option></select></div>
+      <div class="fg-item"><label>PCB?</label><select id="eea-pcb"><option value="Y"${a.pcb!=='N'?' selected':''}>Y — Yes</option><option value="N"${a.pcb==='N'?' selected':''}>N — No (exempt)</option></select></div>
     </div>
     <div style="border-top:1px solid rgba(0,0,0,0.08);margin:14px 0;padding-top:14px">
       <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Recurring Payment</div>
@@ -6492,6 +6503,7 @@ function openEditAllow(i){
       kwsp:document.getElementById('eea-kwsp').value,
       socso:document.getElementById('eea-socso').value,
       eis:document.getElementById('eea-eis').value,
+      pcb:document.getElementById('eea-pcb').value,
       recurring:recVal,
       startDate:document.getElementById('eea-start').value,
       expiryDate:document.getElementById('eea-expiry').value
@@ -6577,7 +6589,8 @@ function openAddIncome(){
       <div class="fg-item span2"><label>Remarks / Notes</label><input id="ei-remark" placeholder="Optional"></div>
       <div class="fg-item"><label>KWSP?</label><select id="ei-kwsp"><option value="Y">Y — Yes</option><option value="N">N — No</option></select></div>
       <div class="fg-item"><label>SOCSO?</label><select id="ei-socso"><option value="Y">Y — Yes</option><option value="N">N — No</option></select></div>
-      <div class="fg-item span2"><label>EIS?</label><select id="ei-eis"><option value="Y">Y — Yes</option><option value="N">N — No</option></select></div>
+      <div class="fg-item"><label>EIS?</label><select id="ei-eis"><option value="Y">Y — Yes</option><option value="N">N — No</option></select></div>
+      <div class="fg-item"><label>PCB?</label><select id="ei-pcb"><option value="Y">Y — Yes</option><option value="N">N — No (exempt)</option></select></div>
     </div>
     <div style="border-top:1px solid rgba(0,0,0,0.08);margin:14px 0;padding-top:14px">
       <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Recurring Payment</div>
@@ -6614,6 +6627,7 @@ function openAddIncome(){
       kwsp:document.getElementById('ei-kwsp').value,
       socso:document.getElementById('ei-socso').value,
       eis:document.getElementById('ei-eis').value,
+      pcb:document.getElementById('ei-pcb').value,
       remark:document.getElementById('ei-remark').value,
       recurring:recVal,
       startDate:recVal==='Y'?document.getElementById('ei-start').value:'',
@@ -6637,7 +6651,8 @@ function openEditIncome(i){
       <div class="fg-item span2"><label>Remarks</label><input id="eei-remark" value="${h(a.remark||'')}"></div>
       <div class="fg-item"><label>KWSP?</label><select id="eei-kwsp"><option value="Y"${a.kwsp==='Y'?' selected':''}>Y — Yes</option><option value="N"${a.kwsp==='N'?' selected':''}>N — No</option></select></div>
       <div class="fg-item"><label>SOCSO?</label><select id="eei-socso"><option value="Y"${a.socso==='Y'?' selected':''}>Y — Yes</option><option value="N"${a.socso==='N'?' selected':''}>N — No</option></select></div>
-      <div class="fg-item span2"><label>EIS?</label><select id="eei-eis"><option value="Y"${a.eis==='Y'?' selected':''}>Y — Yes</option><option value="N"${a.eis==='N'?' selected':''}>N — No</option></select></div>
+      <div class="fg-item"><label>EIS?</label><select id="eei-eis"><option value="Y"${a.eis==='Y'?' selected':''}>Y — Yes</option><option value="N"${a.eis==='N'?' selected':''}>N — No</option></select></div>
+      <div class="fg-item"><label>PCB?</label><select id="eei-pcb"><option value="Y"${a.pcb!=='N'?' selected':''}>Y — Yes</option><option value="N"${a.pcb==='N'?' selected':''}>N — No (exempt)</option></select></div>
     </div>
     <div style="border-top:1px solid rgba(0,0,0,0.08);margin:14px 0;padding-top:14px">
       <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Recurring Payment</div>
@@ -6672,6 +6687,7 @@ function openEditIncome(i){
       kwsp:document.getElementById('eei-kwsp').value,
       socso:document.getElementById('eei-socso').value,
       eis:document.getElementById('eei-eis').value,
+      pcb:document.getElementById('eei-pcb').value,
       recurring:recVal,
       startDate:document.getElementById('eei-start').value,
       expiryDate:document.getElementById('eei-expiry').value
