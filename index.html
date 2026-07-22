@@ -321,7 +321,7 @@ input[type=file]{display:none}
       <a onclick="signOutUser()" style="cursor:pointer;color:#991b1b;font-size:9px;font-weight:600;flex-shrink:0">Sign Out</a>
     </div>
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.22-18:30</div>
+    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.22-19:00</div>
   </div>
 </aside>
 
@@ -8357,16 +8357,18 @@ async function submitAuthForm(){
     if(password!==confirmPassword){ errEl.textContent='Passwords do not match.'; return; }
   }
   const btn=document.getElementById('auth-submit-btn');
-  btn.disabled=true; const origLabel=btn.textContent; btn.textContent='Please wait…';
+  btn.disabled=true; btn.textContent='Please wait…';
   try{
     if(authMode==='signup'){
       const fullName=(document.getElementById('auth-name').value||'').trim();
       const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:fullName}}});
       if(error) throw error;
       if(data.user && !data.session){
+        // toggleAuthMode() clears auth-err at its end, so it must run BEFORE we set
+        // the message below, not after — otherwise the message is wiped instantly.
+        toggleAuthMode();
         errEl.style.color='#166534';
         errEl.textContent='Account created. Check your email to confirm, then log in.';
-        toggleAuthMode();
         return;
       }
       await handleSessionChange();
@@ -8379,7 +8381,12 @@ async function submitAuthForm(){
     errEl.style.color='#991b1b';
     errEl.textContent=(e && e.message) ? e.message : 'Something went wrong. Please try again.';
   }finally{
-    btn.disabled=false; btn.textContent=origLabel;
+    // Re-derive the label from the CURRENT authMode rather than the captured origLabel —
+    // a successful signup-without-session flips authMode to 'login' mid-try (via
+    // toggleAuthMode()), and finally always runs after that, so restoring the stale
+    // pre-submit label would show "Sign Up" under a "Log In" title.
+    btn.disabled=false;
+    btn.textContent = authMode==='login' ? 'Log In' : 'Sign Up';
   }
 }
 
