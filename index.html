@@ -7,6 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PayFlow HR & Payroll System</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,sans-serif;font-size:13px;background:#f5f5f3;color:#111;height:100vh;height:100dvh;overflow:hidden}
@@ -135,6 +136,18 @@ tr.clickable:hover td{background:#f8f8f6}
 /* Modal overlay */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center}
 .overlay.open{display:flex}
+/* Auth screens */
+#auth-screen,#pending-screen{display:none;position:fixed;inset:0;background:#f5f5f3;z-index:2000;align-items:center;justify-content:center;flex-direction:column}
+.auth-card{background:#fff;border-radius:14px;border:1px solid rgba(0,0,0,0.12);padding:28px 30px;width:340px;box-shadow:0 8px 30px rgba(0,0,0,0.08)}
+.auth-card h1{font-size:16px;font-weight:600;margin-bottom:2px}
+.auth-card p.sub{font-size:11px;color:#888;margin-bottom:18px}
+.auth-field{margin-bottom:12px}
+.auth-field label{display:block;font-size:10px;font-weight:600;color:#888;margin-bottom:4px}
+.auth-field input{width:100%;font-size:13px;padding:8px 10px;border:1px solid rgba(0,0,0,0.18);border-radius:7px;font-family:inherit}
+.auth-err{font-size:11px;color:#991b1b;margin-bottom:10px;min-height:14px}
+.auth-switch{text-align:center;font-size:11px;color:#666;margin-top:14px}
+.auth-switch a{color:#2563eb;cursor:pointer;text-decoration:none;font-weight:600}
+#pending-screen .auth-card{text-align:center}
 .modal{background:#fff;border-radius:12px;border:1px solid rgba(0,0,0,0.12);padding:20px;width:480px;max-height:88vh;overflow-y:auto;position:relative}
 .modal-lg{width:600px}
 .modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
@@ -186,7 +199,41 @@ input[type=file]{display:none}
 </head>
 <body>
 
-<div class="app">
+<!-- ═══ AUTH: LOGIN / SIGN UP ═══ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <h1 id="auth-title">Log in</h1>
+    <p class="sub">MyEden Group · HR &amp; Payroll System</p>
+    <div class="auth-err" id="auth-err"></div>
+    <div class="auth-field" id="auth-name-field" style="display:none">
+      <label>Full Name</label>
+      <input type="text" id="auth-name" autocomplete="name">
+    </div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input type="email" id="auth-email" autocomplete="username">
+    </div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input type="password" id="auth-password" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" id="auth-submit-btn" style="width:100%;justify-content:center;padding:9px" onclick="submitAuthForm()">Log In</button>
+    <div class="auth-switch" id="auth-switch-wrap">
+      Don't have an account? <a onclick="toggleAuthMode()">Sign up</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AUTH: PENDING APPROVAL ═══ -->
+<div id="pending-screen">
+  <div class="auth-card">
+    <h1>Awaiting Approval</h1>
+    <p class="sub" id="pending-msg">Your account has been created but hasn't been approved yet. An admin needs to grant you access before you can use the system.</p>
+    <button class="btn" style="width:100%;justify-content:center;padding:9px" onclick="signOutUser()">Sign Out</button>
+  </div>
+</div>
+
+<div class="app" id="main-app-shell" style="display:none">
 
 <!-- ═══ SIDEBAR ═══ -->
 <aside class="sidebar">
@@ -206,39 +253,39 @@ input[type=file]{display:none}
     </div>
   </div>
   <div class="nav-sec">Main</div>
-  <div class="nav-item" id="nav-dashboard" onclick="showSection('dashboard')">
+  <div class="nav-item" id="nav-dashboard" data-perm="dashboard" onclick="showSection('dashboard')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     Dashboard
   </div>
   <div class="nav-sec">HR</div>
-  <div class="nav-item active" id="nav-employees" onclick="showSection('employees')">
+  <div class="nav-item active" id="nav-employees" data-perm="employees" onclick="showSection('employees')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.87"/></svg>
     Employees
   </div>
-  <div class="nav-item" onclick="showSection('payroll')">
+  <div class="nav-item" id="nav-payroll" data-perm="runPayroll" onclick="showSection('payroll')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
     Run Payroll
   </div>
-  <div class="nav-item" onclick="showSection('payslips')">
+  <div class="nav-item" id="nav-payslips" data-perm="payslips" onclick="showSection('payslips')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     Payslips
   </div>
-  <div class="nav-item" onclick="showSection('reports')">
+  <div class="nav-item" id="nav-reports" data-perm="reports" onclick="showSection('reports')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     Reports
   </div>
   <div class="nav-sec">Organisation</div>
-  <div class="nav-item" id="nav-companies" onclick="showSection('companies')">
+  <div class="nav-item" id="nav-companies" data-perm="companies" onclick="showSection('companies')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3"/><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>
     Companies
   </div>
   <div class="nav-sec">Settings</div>
-  <div class="nav-item" id="nav-settings" onclick="showSection('settings')">
+  <div class="nav-item" id="nav-settings" data-perm="settings" onclick="showSection('settings')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     Settings
   </div>
   <div class="nav-sec">Tools</div>
-  <div class="nav-item" id="nav-myal" onclick="showSection('myal')">
+  <div class="nav-item" id="nav-myal" data-perm="myal" onclick="showSection('myal')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>
     MYAL Calculator
   </div>
@@ -251,8 +298,12 @@ input[type=file]{display:none}
       <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" style="flex-shrink:0"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
       calexcl/MyPRSys
     </a>
+    <div id="auth-user-row" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:7px;padding:5px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:6px;background:#fff">
+      <span id="auth-user-email" style="font-size:9px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <a onclick="signOutUser()" style="cursor:pointer;color:#991b1b;font-size:9px;font-weight:600;flex-shrink:0">Sign Out</a>
+    </div>
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">v.2026.07.06-17:00</div>
+    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.22-17:30</div>
   </div>
 </aside>
 
@@ -2211,6 +2262,14 @@ function confirmDo(title,msg,fn){
 //  SECTIONS
 // ════════════════════════════════════════════
 function showSection(sec){
+  if(currentProfile && currentProfile.role!=='admin'){
+    const permKey = sec==='payroll' ? 'runPayroll' : sec;
+    const perms = currentProfile.permissions||{};
+    if(!perms[permKey]){
+      toast('You don\'t have access to that section.','error');
+      return;
+    }
+  }
   ['employees','dashboard','payroll','payslips','reports','myal','companies','settings'].forEach(s=>{
     const v=document.getElementById('view-'+s);
     if(v) v.style.display='none';
@@ -2294,7 +2353,17 @@ function renderSettings(){
       +'<button class="btn btn-sm btn-primary" onclick="addPayType()">+ Add Type</button>'
     +'</div>'
   +'</div>'
+
+  // ── User Management (admin only) ──
+  +(currentProfile && currentProfile.role==='admin'
+    ? '<div class="pr-section" style="margin-top:18px" id="users-mgmt-section">'
+      +'<div style="padding:12px 16px;border-bottom:1px solid rgba(0,0,0,0.08)"><strong style="font-size:13px">User Management</strong>'
+      +'<div class="muted" style="font-size:11px;margin-top:2px">Approve new sign-ups and set what each person can access. Changes save immediately per row.</div></div>'
+      +'<div id="users-mgmt-body" style="padding:14px 16px;font-size:12px;color:#888">Loading users…</div>'
+    +'</div>'
+    : '')
   +'</div>';
+  if(currentProfile && currentProfile.role==='admin' && typeof loadUsersMgmt==='function') loadUsersMgmt();
 }
 function setOTField(label,key,val){
   return '<div><div style="font-size:10px;font-weight:600;color:#888;margin-bottom:3px">'+label+'</div>'
@@ -8188,37 +8257,210 @@ function handleXLSFile(input){
   const f=input.files[0]; if(f) processXLSFile(f); input.value='';
 }
 
-loadDB();
+function bootPayFlowApp(){
+  loadDB();
 
-if(!DB.employees.length){
-  DB.employees=[
-    mkEmployee({name:'Ahmad bin Hassan',nric:'900215-01-5055',gender:'M',dept:'Engineering',jobTitle:'Senior Developer',empType:'FT',joined:'2023-01-15',salary:7500,company:'MEG (Myeden Group)'}),
-    mkEmployee({name:'Siti Rahimah binti Ali',nric:'880510-14-2234',gender:'F',dept:'Sales',jobTitle:'Sales Manager',empType:'FT',joined:'2022-06-01',salary:6200,company:'MEG (Myeden Group)'}),
-    mkEmployee({name:'Lim Wei Xin',cname:'林伟新',nric:'920830-07-3345',gender:'M',dept:'Finance',jobTitle:'Accountant',empType:'FT',joined:'2021-09-20',salary:5500,company:'MEG (Myeden Group)'}),
-  ];
-  DB.employees[0].confirmStatus='CF';
-  DB.employees[1].confirmStatus='CF';
-  saveDB();
-} else {
-  // Re-generate IDs for existing auto-ID employees using dateJoined (fixes legacy records)
-  DB.employees.forEach(e=>{
-    if(e.autoId==='Y'&&e.dateJoined){
-      e.empId=genEmpId(e.company,e.gender,e.id,e.dateJoined);
+  if(!DB.employees.length){
+    DB.employees=[
+      mkEmployee({name:'Ahmad bin Hassan',nric:'900215-01-5055',gender:'M',dept:'Engineering',jobTitle:'Senior Developer',empType:'FT',joined:'2023-01-15',salary:7500,company:'MEG (Myeden Group)'}),
+      mkEmployee({name:'Siti Rahimah binti Ali',nric:'880510-14-2234',gender:'F',dept:'Sales',jobTitle:'Sales Manager',empType:'FT',joined:'2022-06-01',salary:6200,company:'MEG (Myeden Group)'}),
+      mkEmployee({name:'Lim Wei Xin',cname:'林伟新',nric:'920830-07-3345',gender:'M',dept:'Finance',jobTitle:'Accountant',empType:'FT',joined:'2021-09-20',salary:5500,company:'MEG (Myeden Group)'}),
+    ];
+    DB.employees[0].confirmStatus='CF';
+    DB.employees[1].confirmStatus='CF';
+    saveDB();
+  } else {
+    // Re-generate IDs for existing auto-ID employees using dateJoined (fixes legacy records)
+    DB.employees.forEach(e=>{
+      if(e.autoId==='Y'&&e.dateJoined){
+        e.empId=genEmpId(e.company,e.gender,e.id,e.dateJoined);
+      }
+    });
+    saveDB();
+  }
+
+  // Expose HR employee data directly so MYAL can read it without localStorage timing issues
+  window._payflowDB = DB;
+
+  // Now trigger MYAL sync with direct in-memory access
+  if(typeof window.myalSyncNow === 'function'){
+    window.myalSyncNow();
+  }
+
+  updateCompanyBadge();
+  applyPermissionsToUI();
+  showSection(currentProfile && currentProfile.permissions && currentProfile.permissions.dashboard===false && currentProfile.permissions.employees ? 'employees' : 'dashboard');
+}
+
+// ════════════════════════════════════════════
+//  SUPABASE AUTH + PERMISSIONS (Phase 1)
+// ════════════════════════════════════════════
+const SUPABASE_URL = 'https://tjoijzzeayolsqnguvpj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqb2lqenplYXlvbHNxbmd1dnBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MDU3MjEsImV4cCI6MjEwMDI4MTcyMX0.MlKm_MKVNYfGaep3o0OF3GUDcY0GcmyznhbWfOEWMqE';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const PERMISSION_MODULES = ['dashboard','employees','runPayroll','payslips','reports','companies','settings','myal'];
+
+let currentProfile = null;
+let authMode = 'login'; // 'login' | 'signup'
+
+function toggleAuthMode(){
+  authMode = authMode==='login' ? 'signup' : 'login';
+  document.getElementById('auth-title').textContent = authMode==='login' ? 'Log In' : 'Sign Up';
+  document.getElementById('auth-submit-btn').textContent = authMode==='login' ? 'Log In' : 'Sign Up';
+  document.getElementById('auth-name-field').style.display = authMode==='signup' ? '' : 'none';
+  document.getElementById('auth-switch-wrap').innerHTML = authMode==='login'
+    ? 'Don\'t have an account? <a onclick="toggleAuthMode()">Sign up</a>'
+    : 'Already have an account? <a onclick="toggleAuthMode()">Log in</a>';
+  document.getElementById('auth-err').textContent='';
+}
+
+async function submitAuthForm(){
+  const email=(document.getElementById('auth-email').value||'').trim();
+  const password=document.getElementById('auth-password').value||'';
+  const errEl=document.getElementById('auth-err');
+  errEl.textContent='';
+  if(!email || !password){ errEl.textContent='Email and password are required.'; return; }
+  const btn=document.getElementById('auth-submit-btn');
+  btn.disabled=true; const origLabel=btn.textContent; btn.textContent='Please wait…';
+  try{
+    if(authMode==='signup'){
+      const fullName=(document.getElementById('auth-name').value||'').trim();
+      const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:fullName}}});
+      if(error) throw error;
+      if(data.user && !data.session){
+        errEl.style.color='#166534';
+        errEl.textContent='Account created. Check your email to confirm, then log in.';
+        toggleAuthMode();
+        return;
+      }
+      await handleSessionChange();
+    } else {
+      const {error}=await sb.auth.signInWithPassword({email,password});
+      if(error) throw error;
+      await handleSessionChange();
     }
+  }catch(e){
+    errEl.style.color='#991b1b';
+    errEl.textContent=(e && e.message) ? e.message : 'Something went wrong. Please try again.';
+  }finally{
+    btn.disabled=false; btn.textContent=origLabel;
+  }
+}
+
+async function signOutUser(){
+  try{ await sb.auth.signOut(); }catch(e){}
+  currentProfile=null;
+  document.getElementById('main-app-shell').style.display='none';
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+}
+
+async function handleSessionChange(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){
+    document.getElementById('main-app-shell').style.display='none';
+    document.getElementById('pending-screen').style.display='none';
+    document.getElementById('auth-screen').style.display='flex';
+    return;
+  }
+  const {data:profile,error}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
+  if(error || !profile){
+    // Row not yet created by trigger (race on first sign-up) — retry once shortly.
+    setTimeout(handleSessionChange, 800);
+    return;
+  }
+  currentProfile=profile;
+  if(profile.status!=='active'){
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('main-app-shell').style.display='none';
+    document.getElementById('pending-msg').textContent = profile.status==='disabled'
+      ? 'Your account access has been disabled. Contact your administrator.'
+      : 'Your account has been created but hasn\'t been approved yet. An admin needs to grant you access before you can use the system.';
+    document.getElementById('pending-screen').style.display='flex';
+    return;
+  }
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('main-app-shell').style.display='flex';
+  const emailEl=document.getElementById('auth-user-email');
+  if(emailEl) emailEl.textContent=profile.email+(profile.role==='admin'?' · admin':'');
+  bootPayFlowApp();
+}
+
+function applyPermissionsToUI(){
+  if(!currentProfile) return;
+  const perms = currentProfile.permissions||{};
+  const isAdmin = currentProfile.role==='admin';
+  document.querySelectorAll('.nav-item[data-perm]').forEach(el=>{
+    const p=el.getAttribute('data-perm');
+    el.style.display = (isAdmin || perms[p]) ? '' : 'none';
   });
-  saveDB();
 }
 
-// Expose HR employee data directly so MYAL can read it without localStorage timing issues
-window._payflowDB = DB;
+const PERM_LABELS = {dashboard:'Dashboard',employees:'Employees',runPayroll:'Run Payroll',payslips:'Payslips',reports:'Reports',companies:'Companies',settings:'Settings',myal:'MYAL Calc'};
 
-// Now trigger MYAL sync with direct in-memory access
-if(typeof window.myalSyncNow === 'function'){
-  window.myalSyncNow();
+async function loadUsersMgmt(){
+  const body=document.getElementById('users-mgmt-body');
+  if(!body) return;
+  const {data:users,error}=await sb.from('profiles').select('*').order('created_at',{ascending:true});
+  if(error){ body.innerHTML='<span style="color:#991b1b">Failed to load users: '+error.message+'</span>'; return; }
+  if(!users || !users.length){ body.innerHTML='No users yet.'; return; }
+  const permHead=PERMISSION_MODULES.map(m=>'<th style="font-size:9px;font-weight:700;color:#888;padding:6px 5px;text-align:center;white-space:nowrap">'+PERM_LABELS[m]+'</th>').join('');
+  const rows=users.map(u=>{
+    const perms=u.permissions||{};
+    const permCells=PERMISSION_MODULES.map(m=>
+      '<td style="text-align:center;padding:6px 5px"><input type="checkbox" data-user="'+u.id+'" data-perm="'+m+'" '+(perms[m]?'checked':'')+' '+(u.role==='admin'?'disabled':'')+' style="width:14px;height:14px;cursor:pointer"></td>'
+    ).join('');
+    return '<tr style="border-bottom:1px solid rgba(0,0,0,0.06)">'
+      +'<td style="padding:6px 8px;font-size:12px">'+(u.full_name||'—')+'<div class="muted" style="font-size:10px">'+u.email+'</div></td>'
+      +'<td style="padding:6px 8px"><select id="role-'+u.id+'" style="font-size:11px;padding:3px 5px;border:1px solid rgba(0,0,0,0.15);border-radius:5px">'
+        +'<option value="staff"'+(u.role==='staff'?' selected':'')+'>Staff</option>'
+        +'<option value="admin"'+(u.role==='admin'?' selected':'')+'>Admin</option>'
+      +'</select></td>'
+      +'<td style="padding:6px 8px"><select id="status-'+u.id+'" style="font-size:11px;padding:3px 5px;border:1px solid rgba(0,0,0,0.15);border-radius:5px">'
+        +'<option value="pending"'+(u.status==='pending'?' selected':'')+'>Pending</option>'
+        +'<option value="active"'+(u.status==='active'?' selected':'')+'>Active</option>'
+        +'<option value="disabled"'+(u.status==='disabled'?' selected':'')+'>Disabled</option>'
+      +'</select></td>'
+      +permCells
+      +'<td style="padding:6px 8px"><button class="btn btn-sm btn-primary" onclick="saveUserProfile(\''+u.id+'\')">Save</button></td>'
+    +'</tr>';
+  }).join('');
+  body.innerHTML='<div style="overflow-x-auto"><table style="border-collapse:collapse;width:100%"><thead><tr style="background:#f3f4f6">'
+    +'<th style="font-size:9px;font-weight:700;color:#888;padding:6px 8px;text-align:left">Name / Email</th>'
+    +'<th style="font-size:9px;font-weight:700;color:#888;padding:6px 8px;text-align:left">Role</th>'
+    +'<th style="font-size:9px;font-weight:700;color:#888;padding:6px 8px;text-align:left">Status</th>'
+    +permHead
+    +'<th></th>'
+  +'</tr></thead><tbody>'+rows+'</tbody></table></div>'
+  +'<div class="muted" style="font-size:10px;margin-top:8px">Admins implicitly have access to every module — permission checkboxes are disabled for admin rows.</div>';
 }
 
-updateCompanyBadge();
-showSection('dashboard');
+async function saveUserProfile(id){
+  const role=document.getElementById('role-'+id).value;
+  const status=document.getElementById('status-'+id).value;
+  const permissions={};
+  PERMISSION_MODULES.forEach(m=>{
+    const cb=document.querySelector('input[data-user="'+id+'"][data-perm="'+m+'"]');
+    permissions[m]=cb ? !!cb.checked : false;
+  });
+  const {error}=await sb.from('profiles').update({role,status,permissions,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error){ toast('Failed to save: '+error.message,'error'); return; }
+  toast('User updated');
+  loadUsersMgmt();
+}
+
+sb.auth.onAuthStateChange((event)=>{
+  if(event==='SIGNED_OUT'){
+    currentProfile=null;
+    document.getElementById('main-app-shell').style.display='none';
+    document.getElementById('pending-screen').style.display='none';
+    document.getElementById('auth-screen').style.display='flex';
+  }
+});
+
+handleSessionChange();
 </script>
 </div>
 </div>
