@@ -144,6 +144,10 @@ tr.clickable:hover td{background:#f8f8f6}
 .auth-field{margin-bottom:12px}
 .auth-field label{display:block;font-size:10px;font-weight:600;color:#888;margin-bottom:4px}
 .auth-field input{width:100%;font-size:13px;padding:8px 10px;border:1px solid rgba(0,0,0,0.18);border-radius:7px;font-family:inherit}
+.auth-pwd-wrap{position:relative}
+.auth-pwd-wrap input{padding-right:34px}
+.auth-eye-btn{position:absolute;right:5px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#999;padding:4px;display:flex;align-items:center;justify-content:center;border-radius:5px}
+.auth-eye-btn:hover{color:#111;background:#f0efe8}
 .auth-err{font-size:11px;color:#991b1b;margin-bottom:10px;min-height:14px}
 .auth-switch{text-align:center;font-size:11px;color:#666;margin-top:14px}
 .auth-switch a{color:#2563eb;cursor:pointer;text-decoration:none;font-weight:600}
@@ -215,7 +219,21 @@ input[type=file]{display:none}
     </div>
     <div class="auth-field">
       <label>Password</label>
-      <input type="password" id="auth-password" autocomplete="current-password">
+      <div class="auth-pwd-wrap">
+        <input type="password" id="auth-password" autocomplete="current-password">
+        <button type="button" class="auth-eye-btn" onclick="togglePwdVisibility('auth-password',this)" aria-label="Show password" tabindex="-1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="auth-field" id="auth-confirm-field" style="display:none">
+      <label>Confirm Password</label>
+      <div class="auth-pwd-wrap">
+        <input type="password" id="auth-confirm-password" autocomplete="new-password">
+        <button type="button" class="auth-eye-btn" onclick="togglePwdVisibility('auth-confirm-password',this)" aria-label="Show password" tabindex="-1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
     </div>
     <button class="btn btn-primary" id="auth-submit-btn" style="width:100%;justify-content:center;padding:9px" onclick="submitAuthForm()">Log In</button>
     <div class="auth-switch" id="auth-switch-wrap">
@@ -303,7 +321,7 @@ input[type=file]{display:none}
       <a onclick="signOutUser()" style="cursor:pointer;color:#991b1b;font-size:9px;font-weight:600;flex-shrink:0">Sign Out</a>
     </div>
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.22-17:30</div>
+    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.22-18:30</div>
   </div>
 </aside>
 
@@ -8309,18 +8327,35 @@ function toggleAuthMode(){
   document.getElementById('auth-title').textContent = authMode==='login' ? 'Log In' : 'Sign Up';
   document.getElementById('auth-submit-btn').textContent = authMode==='login' ? 'Log In' : 'Sign Up';
   document.getElementById('auth-name-field').style.display = authMode==='signup' ? '' : 'none';
+  document.getElementById('auth-confirm-field').style.display = authMode==='signup' ? '' : 'none';
+  document.getElementById('auth-confirm-password').value='';
   document.getElementById('auth-switch-wrap').innerHTML = authMode==='login'
     ? 'Don\'t have an account? <a onclick="toggleAuthMode()">Sign up</a>'
     : 'Already have an account? <a onclick="toggleAuthMode()">Log in</a>';
   document.getElementById('auth-err').textContent='';
 }
 
+const EYE_OPEN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.6 18.6 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+function togglePwdVisibility(inputId, btn){
+  const input=document.getElementById(inputId);
+  const showing = input.type==='text';
+  input.type = showing ? 'password' : 'text';
+  btn.innerHTML = showing ? EYE_OPEN_SVG : EYE_OFF_SVG;
+  btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+}
+
 async function submitAuthForm(){
   const email=(document.getElementById('auth-email').value||'').trim();
   const password=document.getElementById('auth-password').value||'';
   const errEl=document.getElementById('auth-err');
+  errEl.style.color='#991b1b';
   errEl.textContent='';
   if(!email || !password){ errEl.textContent='Email and password are required.'; return; }
+  if(authMode==='signup'){
+    const confirmPassword=document.getElementById('auth-confirm-password').value||'';
+    if(password!==confirmPassword){ errEl.textContent='Passwords do not match.'; return; }
+  }
   const btn=document.getElementById('auth-submit-btn');
   btn.disabled=true; const origLabel=btn.textContent; btn.textContent='Please wait…';
   try{
