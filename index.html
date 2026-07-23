@@ -302,6 +302,10 @@ input[type=file]{display:none}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     Settings
   </div>
+  <div class="nav-item" id="nav-migration" data-perm="settings" onclick="showSection('migration')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+    Data Migration
+  </div>
   <div class="nav-sec">Tools</div>
   <div class="nav-item" id="nav-myal" data-perm="myal" onclick="showSection('myal')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>
@@ -321,7 +325,7 @@ input[type=file]{display:none}
       <a onclick="signOutUser()" style="cursor:pointer;color:#991b1b;font-size:9px;font-weight:600;flex-shrink:0">Sign Out</a>
     </div>
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.22-20:00</div>
+    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.23-12:00</div>
   </div>
 </aside>
 
@@ -445,6 +449,12 @@ input[type=file]{display:none}
   <div id="view-settings" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0">
     <div class="topbar"><h2>Settings</h2><div class="topbar-right"></div></div>
     <div id="settings-content" style="flex:1;overflow-y:auto;min-height:0"></div>
+  </div>
+
+  <!-- Data Migration (Supabase) -->
+  <div id="view-migration" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0">
+    <div class="topbar"><h2>Data Migration</h2><div class="topbar-right"></div></div>
+    <div class="content" id="migration-content" style="flex:1;overflow-y:auto;min-height:0"></div>
   </div>
 
   <!-- Companies Management -->
@@ -2288,7 +2298,7 @@ function showSection(sec){
       return;
     }
   }
-  ['employees','dashboard','payroll','payslips','reports','myal','companies','settings'].forEach(s=>{
+  ['employees','dashboard','payroll','payslips','reports','myal','companies','settings','migration'].forEach(s=>{
     const v=document.getElementById('view-'+s);
     if(v) v.style.display='none';
   });
@@ -2427,6 +2437,7 @@ function renderPlaceholder(sec){
   if(sec==='reports')   { renderReports();   return; }
   if(sec==='dashboard') { renderDashboard(); return; }
   if(sec==='companies') { renderCompanies(); return; }
+  if(sec==='migration') { renderMigration(); return; }
 }
 
 // ════════════════════════════════════════════
@@ -8507,6 +8518,213 @@ async function saveUserProfile(id){
   if(error){ toast('Failed to save: '+error.message,'error'); return; }
   toast('User updated');
   loadUsersMgmt();
+}
+
+// ════════════════════════════════════════════
+//  DATA MIGRATION — one-time push of local DB into Supabase (Phase 2 tables)
+//  Non-destructive: never mutates DB or switches read path. Admin-only.
+// ════════════════════════════════════════════
+const MIGRATION_TABLES = ['companies','employees','employee_companies','payment_types','ot_settings','payslips'];
+
+function migrationCounts(){
+  return {
+    companies: (DB.companies||[]).length,
+    employees: (DB.employees||[]).length,
+    employee_companies: (DB.employees||[]).reduce((s,e)=>s+((e.companies||[]).length),0),
+    payment_types: (DB.settings&&DB.settings.paymentTypes)?DB.settings.paymentTypes.length:0,
+    ot_settings: 1,
+    payslips: (DB.payslips||[]).length,
+  };
+}
+
+function migrationTransformCompanies(){
+  return (DB.companies||[]).map(c=>({
+    id:c.id, is_default:!!c.isDefault, name:c.name||'', short_name:c.shortName||'',
+    reg_no:c.regNo||'', tagline:c.tagline||'', epf_no:c.epfNo||'', socso_no_employer:c.socsoNoEmployer||'',
+    address:c.address||'', logo:c.logo||''
+  }));
+}
+
+function migrationTransformEmployees(){
+  return (DB.employees||[]).map(e=>({
+    id:e.id, name:e.name||'', chinese_name:e.chineseName||'', nric:e.nric||'', dob:e.dob||null,
+    age:(e.age===''||e.age===undefined||e.age===null)?null:parseInt(e.age)||null,
+    nationality:e.nationality||'', race:e.race||'', gender:e.gender||'', address:e.address||'',
+    contacts:e.contacts||[], email:e.email||'', marital_status:e.maritalStatus||'', spouse_name:e.spouseName||'',
+    emp_id:e.empId||'', auto_id:e.autoId||'Y', company:e.company||'',
+    first_time_contributor_57:!!e.firstTimeContributor57,
+    annual_leave:e.annualLeave||{}, replacement_leave:e.replacementLeave||{}, sick_leave:e.sickLeave||{},
+    unpaid_leave:e.unpaidLeave||{}, other_leaves:e.otherLeaves||[]
+  }));
+}
+
+function migrationTransformEmployeeCompanies(){
+  const rows=[];
+  (DB.employees||[]).forEach(e=>{
+    (e.companies||[]).forEach(b=>{
+      rows.push({
+        employee_id:e.id, company_id:b.companyId, is_primary:!!b.primary,
+        dept:b.dept||'', job_title:b.jobTitle||'', emp_type:b.empType||'FT',
+        date_joined:b.dateJoined||null, confirm_status:b.confirmStatus||'UP',
+        confirmed_date:b.confirmedDate||null, resign_letter_date:b.resignLetterDate||null,
+        notice_days:b.noticeDays||30, notice_period_end_date:b.noticePeriodEndDate||null,
+        resigned_date:b.resignedDate||null, work_from:b.workFrom||'08:00', work_to:b.workTo||'17:00',
+        meal_duration:b.mealDuration||60, ot_days:b.otDays||26,
+        bank_name:b.bankName||'', bank_account:b.bankAccount||'', kwsp_no:b.kwspNo||'',
+        socso_no:b.socsoNo||'', tin_no:b.tinNo||'',
+        kwsp_emp_contrib:b.kwspEmpContrib!==false, kwsp_er_contrib:b.kwspErContrib!==false,
+        socso_emp_contrib:b.socsoEmpContrib!==false, socso_er_contrib:b.socsoErContrib!==false,
+        eis_emp_contrib:b.eisEmpContrib!==false, eis_er_contrib:b.eisErContrib!==false,
+        salary_history:b.salaryHistory||[], allowances:b.allowances||[], other_income:b.otherIncome||[]
+      });
+    });
+  });
+  return rows;
+}
+
+function migrationTransformPaymentTypes(){
+  return ((DB.settings&&DB.settings.paymentTypes)||[]).map(p=>({
+    id:String(p.id), key:p.key||null, name:p.name||'', category:p.category||'Other',
+    epf_exempt:!!p.epfExempt, socso_exempt:!!p.socsoExempt, eis_exempt:!!p.eisExempt, pcb_exempt:!!p.pcbExempt
+  }));
+}
+
+function migrationTransformOtSettings(){
+  const ot=(DB.settings&&DB.settings.ot)||{};
+  return {id:1, divisor_days:ot.divisorDays||26, divisor_hours:ot.divisorHours||8,
+    mult_normal:ot.multNormal||1.5, mult_rest:ot.multRest||2.0, mult_ph:ot.multPH||3.0};
+}
+
+function migrationTransformPayslips(){
+  return (DB.payslips||[]).map(r=>{
+    const emp=(DB.employees||[]).find(e=>e.empId===r.empId);
+    return {
+      employee_id:emp?emp.id:null, emp_id:r.empId||'', emp_name:r.empName||'', dept:r.dept||'',
+      job_title:r.jobTitle||'', company:r.company||'', company_id:r.companyId||null, company_name:r.companyName||'',
+      period:r.period||'', sal_code:r.salCode||'', is_hourly:!!r.isHourly, hourly_label:r.hourlyLabel||'',
+      basic:r.basic||0, basic_before_prorate:r.basicBeforeProrate||0, pt_hours:r.ptHours||0,
+      ot_hours:r.otHours||0, ot_pay:r.otPay||0, ot_normal_hrs:r.otNormalHrs||0, ot_rest_hrs:r.otRestHrs||0,
+      ot_ph_hrs:r.otPHHrs||0, ot_pay_n:r.otPayN||0, ot_pay_r:r.otPayR||0, ot_pay_p:r.otPayP||0, ot_rate:r.otRate||0,
+      al_buyback_days:r.alBuybackDays||0, al_buyback_amt:r.alBuybackAmt||0, al_buyback_daily:r.alBuybackDaily||0,
+      epf_base:r.epfBase||0, socso_base:r.socsoBase||0, eis_base:r.eisBase||0, pcb_base:r.pcbBase||0,
+      allow_total:r.allowTotal||0, inc_total:r.incTotal||0, new_pro_adj:r.newProAdj||0, resign_adj:r.resignAdj||0,
+      total_pro_adj:r.totalProAdj||0, unpaid_leave_deduction:r.unpaidLeaveDeduction||0, unpaid_leave_days:r.unpaidLeaveDays||0,
+      excess_al_days:r.excessALDays||0, gross:r.gross||0, epf_emp:r.epfEmp||0, epf_er:r.epfEr||0,
+      socso_emp:r.socsoEmp||0, socso_er:r.socsoEr||0, eis_emp:r.eisEmp||0, eis_er:r.eisEr||0, pcb:r.pcb||0,
+      pcb_calc:r.pcbCalc||0, pcb_apply:!!r.pcbApply,
+      stat_age:(r.statAge===''||r.statAge===undefined||r.statAge===null)?null:parseInt(r.statAge)||null,
+      socso_employer_only:!!r.socsoEmployerOnly, socso_applies:r.socsoApplies!==false, eis_applies:r.eisApplies!==false,
+      extra_deduct:r.extraDeduct||0, total_deduct:r.totalDeduct||0, net_pay:r.netPay||0,
+      leave_entries:r.leaveEntries||{}, nric:r.nric||'', bank_name:r.bankName||'', bank_account:r.bankAccount||'',
+      status:r.status||'Draft', approved_at:r.approvedAt||null
+    };
+  });
+}
+
+async function migrationPushTable(table, rows, onConflict, logFn){
+  if(!rows.length){ if(logFn) logFn(table+': 0 rows — skipped'); return; }
+  const BATCH=500;
+  for(let i=0;i<rows.length;i+=BATCH){
+    const batch=rows.slice(i,i+BATCH);
+    const opts=onConflict?{onConflict}:undefined;
+    const {error}=await sb.from(table).upsert(batch,opts);
+    if(error) throw new Error(table+' write failed: '+error.message);
+    if(logFn) logFn(table+': wrote '+Math.min(i+BATCH,rows.length)+' / '+rows.length);
+  }
+}
+
+async function migrationVerify(){
+  const local=migrationCounts();
+  const remote={};
+  for(const t of MIGRATION_TABLES){
+    const {count,error}=await sb.from(t).select('*',{count:'exact',head:true});
+    remote[t]=error?('ERROR: '+error.message):count;
+  }
+  let remoteNetSum=null, remoteErr=null;
+  try{
+    const {data,error}=await sb.from('payslips').select('net_pay');
+    if(error) remoteErr=error.message; else remoteNetSum=(data||[]).reduce((s,r)=>s+(parseFloat(r.net_pay)||0),0);
+  }catch(e){ remoteErr=e.message; }
+  const localNetSum=(DB.payslips||[]).reduce((s,r)=>s+(r.netPay||0),0);
+  return {local, remote, localNetSum, remoteNetSum, remoteErr};
+}
+
+function migrationRenderReport(v){
+  const rows=MIGRATION_TABLES.map(t=>{
+    const l=v.local[t], r=v.remote[t];
+    const match=(typeof r==='number') && r===l;
+    return '<tr><td style="padding:5px 10px;font-size:12px">'+t+'</td>'
+      +'<td style="padding:5px 10px;font-size:12px;text-align:right">'+l+'</td>'
+      +'<td style="padding:5px 10px;font-size:12px;text-align:right;color:'+(match?'#166534':'#991b1b')+';font-weight:600">'+r+'</td>'
+      +'<td style="padding:5px 10px;font-size:12px;text-align:center">'+(match?'✓':'⚠')+'</td></tr>';
+  }).join('');
+  const netMatch = v.remoteNetSum!==null && Math.abs(v.remoteNetSum-v.localNetSum)<0.01;
+  return '<div style="margin-top:14px">'
+    +'<div style="font-weight:600;font-size:13px;margin-bottom:8px">Verification Report</div>'
+    +'<table style="width:100%;border-collapse:collapse;border:1px solid rgba(0,0,0,0.1);border-radius:6px;overflow:hidden">'
+    +'<thead><tr style="background:#f3f4f6"><th style="padding:5px 10px;font-size:10px;text-align:left">Table</th><th style="padding:5px 10px;font-size:10px;text-align:right">Local</th><th style="padding:5px 10px;font-size:10px;text-align:right">Supabase</th><th style="padding:5px 10px;font-size:10px">Match</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table>'
+    +'<div style="margin-top:10px;font-size:12px;padding:8px 12px;border-radius:6px;background:'+(netMatch?'#dcfce7':'#fee2e2')+';color:'+(netMatch?'#166534':'#991b1b')+'">'
+    +'Sum of net pay across all payslips — Local: '+fmtRM(v.localNetSum)+' · Supabase: '+(v.remoteNetSum===null?('unavailable'+(v.remoteErr?' ('+v.remoteErr+')':'')):fmtRM(v.remoteNetSum))
+    +(netMatch?' — matches ✓':'')+'</div></div>';
+}
+
+function renderMigration(){
+  const c=document.getElementById('migration-content'); if(!c) return;
+  if(!currentProfile || currentProfile.role!=='admin'){
+    c.innerHTML='<div class="empty" style="padding:40px">Only admins can access Data Migration.</div>';
+    return;
+  }
+  const counts=migrationCounts();
+  c.innerHTML=`
+  <div style="padding:16px 20px;max-width:760px">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:12px;color:#1e40af;margin-bottom:16px">
+      One-time tool to push the data currently stored in this browser into the new Supabase tables. This does <strong>not</strong> delete local data or change what the app reads from — it only copies data over so we can verify Supabase is ready before switching over (Phase 3).
+    </div>
+
+    <div style="background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:8px;overflow:hidden;margin-bottom:14px">
+      <div style="padding:10px 14px;border-bottom:1px solid rgba(0,0,0,0.08);font-weight:600;font-size:13px">Preview — records to migrate</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:#f8f8f6"><th style="padding:6px 14px;font-size:10px;text-align:left">Table</th><th style="padding:6px 14px;font-size:10px;text-align:right">Records</th></tr></thead>
+        <tbody>
+          ${MIGRATION_TABLES.map(t=>'<tr><td style="padding:5px 14px;font-size:12px">'+t+'</td><td style="padding:5px 14px;font-size:12px;text-align:right;font-weight:600">'+counts[t]+'</td></tr>').join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <button class="btn btn-primary" id="migration-run-btn" onclick="startMigration()">Push to Supabase</button>
+    <div id="migration-log" style="margin-top:14px;font-family:monospace;font-size:11px;color:#444;white-space:pre-line;max-height:200px;overflow-y:auto;background:#f8f8f6;border:1px solid rgba(0,0,0,0.08);border-radius:6px;padding:10px 12px;display:none"></div>
+    <div id="migration-report"></div>
+  </div>`;
+}
+
+async function startMigration(){
+  const btn=document.getElementById('migration-run-btn');
+  const log=document.getElementById('migration-log');
+  const report=document.getElementById('migration-report');
+  if(!confirm('Push all local data into Supabase now? This can be run more than once safely (existing records are updated, not duplicated).')) return;
+  btn.disabled=true; btn.textContent='Migrating…';
+  log.style.display='block'; log.textContent=''; report.innerHTML='';
+  const appendLog=(msg)=>{ log.textContent+=msg+'\n'; log.scrollTop=log.scrollHeight; };
+  try{
+    appendLog('Starting migration…');
+    await migrationPushTable('companies', migrationTransformCompanies(), 'id', appendLog);
+    await migrationPushTable('employees', migrationTransformEmployees(), 'id', appendLog);
+    await migrationPushTable('employee_companies', migrationTransformEmployeeCompanies(), 'employee_id,company_id', appendLog);
+    await migrationPushTable('payment_types', migrationTransformPaymentTypes(), 'id', appendLog);
+    await migrationPushTable('ot_settings', [migrationTransformOtSettings()], 'id', appendLog);
+    await migrationPushTable('payslips', migrationTransformPayslips(), 'emp_id,period', appendLog);
+    appendLog('Write complete. Verifying…');
+    const v=await migrationVerify();
+    report.innerHTML=migrationRenderReport(v);
+    appendLog('Done.');
+    toast('Migration complete — see verification report');
+  }catch(err){
+    appendLog('✕ ERROR: '+err.message);
+    toast('Migration failed: '+err.message,'error');
+  }finally{
+    btn.disabled=false; btn.textContent='Push to Supabase';
+  }
 }
 
 sb.auth.onAuthStateChange((event)=>{
