@@ -325,7 +325,7 @@ input[type=file]{display:none}
       <a onclick="signOutUser()" style="cursor:pointer;color:#991b1b;font-size:9px;font-weight:600;flex-shrink:0">Sign Out</a>
     </div>
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.23-16:30</div>
+    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.23-17:30</div>
   </div>
 </aside>
 
@@ -1750,7 +1750,7 @@ const COMPANY_BLOCK_FIELDS = [
   'resignLetterDate','noticeDays','noticePeriodEndDate','resignedDate',
   'workFrom','workTo','mealDuration','otDays',
   'salaryHistory','bankName','bankAccount','kwspNo','socsoNo','tinNo',
-  'kwspEmpContrib','kwspErContrib','socsoEmpContrib','socsoErContrib','eisEmpContrib','eisErContrib',
+  'kwspEmpContrib','kwspErContrib','socsoEmpContrib','socsoErContrib','eisEmpContrib','eisErContrib','socsoNeiEmpContrib',
   'allowances','otherIncome'
 ];
 
@@ -2010,7 +2010,7 @@ function assignEmpToCompany(emp, cid){
     workFrom:'08:00', workTo:'17:00', mealDuration:60, otDays:26,
     salaryHistory:[{id:Date.now(),code:'SAL001',amount:0,effectiveDate:'',remark:'Initial'}],
     bankName:'', bankAccount:'', kwspNo:'', socsoNo:(emp.nric||'').replace(/-/g,''), tinNo:'',
-    kwspEmpContrib:true, kwspErContrib:true, socsoEmpContrib:true, socsoErContrib:true, eisEmpContrib:true, eisErContrib:true,
+    kwspEmpContrib:true, kwspErContrib:true, socsoEmpContrib:true, socsoErContrib:true, eisEmpContrib:true, eisErContrib:true, socsoNeiEmpContrib:true,
     allowances:[], otherIncome:[]
   });
 }
@@ -2284,7 +2284,7 @@ function mkEmployee(opts){
       workFrom:'08:00', workTo:'17:00', mealDuration:60, otDays:26,
       salaryHistory:salHist.map(s=>({...s})),
       bankName:'', bankAccount:'', kwspNo:'', socsoNo:(opts.nric||'').replace(/-/g,''), tinNo:'',
-      kwspEmpContrib:true, kwspErContrib:true, socsoEmpContrib:true, socsoErContrib:true, eisEmpContrib:true, eisErContrib:true,
+      kwspEmpContrib:true, kwspErContrib:true, socsoEmpContrib:true, socsoErContrib:true, eisEmpContrib:true, eisErContrib:true, socsoNeiEmpContrib:true,
       allowances:[], otherIncome:[]
     }]
   };
@@ -2803,6 +2803,19 @@ function payTypeByName(n){
   return getSettings().paymentTypes.find(p=>(p.name||'').trim().toLowerCase()===nn)||null;
 }
 
+// SOCSO employee-side split into Invalidity + Non-Employment Injury (NEI), effective June 2026.
+// Applies to the under-60 (Jenis Pertama) post-June-2026 table only — Invalidity + NEI sums to
+// the existing SOCSO_STD employee amount for every bracket (verified against source table).
+// Brackets are the exact same wage ceilings as SOCSO_STD, in the same order: [maxWage, invalidity, nei]
+const SOCSO_NEI_TABLE = [[30.0,0.10,0.20],[50.0,0.20,0.30],[70.0,0.30,0.50],[100.0,0.40,0.65],[140.0,0.60,0.90],[200.0,0.85,1.25],[300.0,1.25,1.85],[400.0,1.75,2.65],[500.0,2.25,3.35],[600.0,2.75,4.15],[700.0,3.25,4.85],[800.0,3.75,5.65],[900.0,4.25,6.35],[1000.0,4.75,7.15],[1100.0,5.25,7.85],[1200.0,5.75,8.65],[1300.0,6.25,9.35],[1400.0,6.75,10.15],[1500.0,7.25,10.85],[1600.0,7.75,11.65],[1700.0,8.25,12.35],[1800.0,8.75,13.15],[1900.0,9.25,13.85],[2000.0,9.75,14.65],[2100.0,10.25,15.35],[2200.0,10.75,16.15],[2300.0,11.25,16.85],[2400.0,11.75,17.65],[2500.0,12.25,18.35],[2600.0,12.75,19.15],[2700.0,13.25,19.85],[2800.0,13.75,20.65],[2900.0,14.25,21.35],[3000.0,14.75,22.15],[3100.0,15.25,22.85],[3200.0,15.75,23.65],[3300.0,16.25,24.35],[3400.0,16.75,25.15],[3500.0,17.25,25.85],[3600.0,17.75,26.65],[3700.0,18.25,27.35],[3800.0,18.75,28.15],[3900.0,19.25,28.85],[4000.0,19.75,29.65],[4100.0,20.25,30.35],[4200.0,20.75,31.15],[4300.0,21.25,31.85],[4400.0,21.75,32.65],[4500.0,22.25,33.35],[4600.0,22.75,34.15],[4700.0,23.25,34.85],[4800.0,23.75,35.65],[4900.0,24.25,36.35],[5000.0,24.75,37.15],[5100.0,25.25,37.85],[5200.0,25.75,38.65],[5300.0,26.25,39.35],[5400.0,26.75,40.15],[5500.0,27.25,40.85],[5600.0,27.75,41.65],[5700.0,28.25,42.35],[5800.0,28.75,43.15],[5900.0,29.25,43.85],[6000.0,29.75,44.65]];
+function socsoNeiLookup(wage){
+  if(wage<=0) return {invalidity:0, nei:0};
+  for(let i=0;i<SOCSO_NEI_TABLE.length;i++){
+    if(wage<=SOCSO_NEI_TABLE[i][0]) return {invalidity:SOCSO_NEI_TABLE[i][1], nei:SOCSO_NEI_TABLE[i][2]};
+  }
+  const last=SOCSO_NEI_TABLE[SOCSO_NEI_TABLE.length-1];
+  return {invalidity:last[1], nei:last[2]};
+}
 function statLookup(table, wage){
   if(wage<=0) return {ee:0, er:0};
   for(let i=0;i<table.length;i++){
@@ -2840,14 +2853,26 @@ function isNewStatRates(periodStr){
 // employee share = Invalidity + Non-Employment Injury). 60+ (Jenis Kedua): from Jun 2026
 // the employee pays the Non-Employment Injury share; pre-Jun-2026 was employer-only.
 function socsoContribution(wage, age, period){
-  if(wage<=0) return {ee:0, er:0};
+  if(wage<=0) return {ee:0, er:0, invalidity:0, nei:0};
   const w = Math.min(wage, 6000);
   const is60 = age!=='' && age!=null && age>=60;
   const newEra = isNewStatRates(period);
   const table = is60 ? (newEra ? STAT_TABLES.SOCSO_60 : STAT_TABLES.SOCSO_60_PRE0626)
                      : (newEra ? STAT_TABLES.SOCSO_STD : STAT_TABLES.SOCSO_STD_PRE0626);
   const hit = statLookup(table, w);
-  return hit || {ee: table[table.length-1][1], er: table[table.length-1][2]};
+  const result = hit || {ee: table[table.length-1][1], er: table[table.length-1][2]};
+  // Invalidity/NEI breakdown only applies to the under-60, post-June-2026 table — that's the
+  // only one the source table covers. Elsewhere, treat the whole employee amount as Invalidity
+  // (no NEI line) so nothing goes missing from the total.
+  if(!is60 && newEra){
+    const split = socsoNeiLookup(w);
+    result.invalidity = split.invalidity;
+    result.nei = split.nei;
+  } else {
+    result.invalidity = result.ee;
+    result.nei = 0;
+  }
+  return result;
 }
 
 // EIS: wages capped at RM6,000, employee=employer. (Eligibility handled by caller for age 60+.)
@@ -2998,6 +3023,7 @@ function computePayslip(emp, opts){
   const socsoEr  = emp.socsoErContrib  !== false;
   const eisEmp  = emp.eisEmpContrib  !== false;
   const eisEr   = emp.eisErContrib   !== false;
+  const socsoNeiEmp = emp.socsoNeiEmpContrib !== false;
 
   // ── Statutory bases (registry-aware: OT categories, AL buyback, allowances, income) ──
   const epfBase   = Math.max(0, basic - totalProAdj + otFor('epf')   + bbFor('epf')   + allowKWSP  + incKWSP);
@@ -3010,13 +3036,18 @@ function computePayslip(emp, opts){
 
   // ── Official bracket-table contributions ──
   const epfTbl   = epfContribution(epfBase, elig.age);
-  const socsoTbl = elig.socsoApplies ? socsoContribution(socsoBase, elig.age, period) : {ee:0, er:0};
+  const socsoTbl = elig.socsoApplies ? socsoContribution(socsoBase, elig.age, period) : {ee:0, er:0, invalidity:0, nei:0};
   const eisTbl   = elig.eisApplies   ? eisContribution(eisBase)                       : {ee:0, er:0};
 
   // Apply per-employee opt-out flags; SOCSO 60+ is employer-only (ee forced 0)
   let epfEmpAmt  = kwspEmp  ? epfTbl.ee   : 0;
   let epfErAmt   = kwspEr   ? epfTbl.er   : 0;
-  let socsoEmpAmt= (socsoEmp && !elig.socsoEmployerOnly) ? socsoTbl.ee : 0;
+  // SOCSO employee side splits into Invalidity + Non-Employment Injury (NEI). NEI has its own
+  // opt-out toggle — Invalidity still applies even if NEI is opted out. socsoEmp (master toggle)
+  // and socsoEmployerOnly (60+ pre-Jun-2026) zero out the whole employee side as before.
+  let socsoInvalidityAmt = (socsoEmp && !elig.socsoEmployerOnly) ? socsoTbl.invalidity : 0;
+  let socsoNeiAmt        = (socsoEmp && !elig.socsoEmployerOnly && socsoNeiEmp) ? socsoTbl.nei : 0;
+  let socsoEmpAmt = Math.round((socsoInvalidityAmt + socsoNeiAmt)*100)/100;
   let socsoErAmt = socsoEr  ? socsoTbl.er : 0;
   let eisEmpAmt  = eisEmp   ? eisTbl.ee   : 0;
   let eisErAmt   = eisEr    ? eisTbl.er   : 0;
@@ -3060,6 +3091,7 @@ function computePayslip(emp, opts){
     gross,
     epfEmp:epfEmpAmt, epfEr:epfErAmt,
     socsoEmp:socsoEmpAmt, socsoEr:socsoErAmt,
+    socsoInvalidity: Math.round(socsoInvalidityAmt*100)/100, socsoNei: Math.round(socsoNeiAmt*100)/100,
     eisEmp:eisEmpAmt, eisEr:eisErAmt, pcb,
     pcbCalc, pcbApply,
     statAge: elig.age, socsoEmployerOnly: elig.socsoEmployerOnly,
@@ -3104,6 +3136,33 @@ function parsePeriod(periodStr){
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const parts=periodStr.split(' ');
   return {mIdx:MONTHS.indexOf(parts[0]), yr:parseInt(parts[1])};
+}
+
+// Pick the salary record actually in effect for a given payroll period — i.e. the most
+// recent record whose effectiveDate is on/before the LAST day of that period's month.
+// Fixes the bug where a future-dated increment (e.g. effective 01-08-2026) was being
+// picked as the default for an earlier period (e.g. June 2026) simply because it was
+// the newest entry in the array. Falls back to the newest record if no period is given
+// or nothing is parseable, matching the old behaviour for non-payroll contexts.
+function salaryForPeriod(emp, periodStr){
+  const hist=(emp&&emp.salaryHistory)||[];
+  if(!hist.length) return {code:'—',amount:0};
+  if(!periodStr) return hist[hist.length-1];
+  const {mIdx,yr}=parsePeriod(periodStr);
+  if(mIdx<0||isNaN(yr)) return hist[hist.length-1];
+  const periodEnd=new Date(yr,mIdx+1,0); // last calendar day of the payroll month
+  const eligible=hist.filter(s=>{
+    if(!s.effectiveDate) return true; // no date on record = always eligible (legacy/initial entries)
+    const d=new Date(s.effectiveDate);
+    return !isNaN(d.getTime()) && d<=periodEnd;
+  });
+  if(!eligible.length) return hist[0]; // payroll runs before any recorded salary — use earliest on file
+  eligible.sort((a,b)=>{
+    const da=a.effectiveDate?new Date(a.effectiveDate).getTime():-Infinity;
+    const db=b.effectiveDate?new Date(b.effectiveDate).getTime():-Infinity;
+    return da-db;
+  });
+  return eligible[eligible.length-1]; // latest record still valid for this period
 }
 
 // Calculate excess AL taken (for resignation scenario)
@@ -3232,7 +3291,7 @@ function renderPayroll(){
   //   • active + resigned-payable → included by default
   //   • dateless-resigned (R/TM with no last-working-day) → listed but UNCHECKED by default
   payrollListEmps(prState.period).forEach(e=>{
-    const lastSal = e.salaryHistory&&e.salaryHistory.length ? e.salaryHistory[e.salaryHistory.length-1] : {code:'—',amount:0};
+    const lastSal = salaryForPeriod(e, prState.period);
     const lastWorkDay = resolveLastWorkingDay(e);
     const dateless = isDatelessResigned(e);
     const newAdj = calcProration(lastSal.amount, e.otDays, e.dateJoined, prState.period);
@@ -3429,7 +3488,7 @@ function prStep2(body){
 
   const rowHTML=(e)=>{
     const sel=prState.selections[e.id]||{};
-    const lastSal=e.salaryHistory&&e.salaryHistory.length?e.salaryHistory[e.salaryHistory.length-1]:{code:'—',amount:0};
+    const lastSal=salaryForPeriod(e, prState.period);
     const isResigned=['R','TM'].includes(e.confirmStatus);
     const dateless=isDatelessResigned(e);
     const bc=e.confirmStatus==='CF'?'bg-green':e.confirmStatus==='UP'?'bg-amber':'bg-red';
@@ -3511,7 +3570,7 @@ function prSelectAll(val){
 function prRowCalcHTML(e){
   const sel=prState.selections[e.id]||{};
   const hist=e.salaryHistory||[];
-  const salRec=hist.find(s=>s.code===sel.salCode)||hist[hist.length-1]||{amount:0,code:'—'};
+  const salRec=hist.find(s=>s.code===sel.salCode)||salaryForPeriod(e, prState.period)||{amount:0,code:'—'};
   const probe=computePayslip(e,{
     basic:salRec.amount, salCode:salRec.code, period:prState.period,
     otNormalHrs:sel.otNormalHrs||0, otRestHrs:sel.otRestHrs||0, otPHHrs:sel.otPHHrs||0,
@@ -3568,7 +3627,7 @@ function prStep3(body){
     ${active.map(e=>{
       const sel=prState.selections[e.id]||{};
       const hist=e.salaryHistory||[];
-      const selRec=hist.find(s=>s.code===sel.salCode)||hist[hist.length-1]||{};
+      const selRec=hist.find(s=>s.code===sel.salCode)||salaryForPeriod(e, prState.period)||{};
       const isHrly=selRec.isHourly===true;
       const newTriggered = sel.newProrateTriggered===true;
       const resignTriggered = sel.resignProrateTriggered===true;
@@ -3802,7 +3861,7 @@ function prCompute(){
     const sel=prState.selections[e.id]||{};
     const le=prState.leaveEntries[e.id]||{};
     const hist=e.salaryHistory||[];
-    const salRec=hist.find(s=>s.code===sel.salCode)||hist[hist.length-1]||{amount:0,code:'—'};
+    const salRec=hist.find(s=>s.code===sel.salCode)||salaryForPeriod(e, prState.period)||{amount:0,code:'—'};
     const r = computePayslip(e,{
       basic:salRec.amount,
       otNormalHrs:sel.otNormalHrs||0, otRestHrs:sel.otRestHrs||0, otPHHrs:sel.otPHHrs||0,
@@ -3846,7 +3905,7 @@ function prStepStat(body){
   const baseFor=(e)=>{
     const sel=prState.selections[e.id]||{};
     const hist=e.salaryHistory||[];
-    const salRec=hist.find(s=>s.code===sel.salCode)||hist[hist.length-1]||{amount:0};
+    const salRec=hist.find(s=>s.code===sel.salCode)||salaryForPeriod(e, prState.period)||{amount:0};
     const probe=computePayslip(e,{
       basic:salRec.amount, ptHours:sel.ptHours||0,
       otNormalHrs:sel.otNormalHrs||0, otRestHrs:sel.otRestHrs||0, otPHHrs:sel.otPHHrs||0,
@@ -3886,7 +3945,7 @@ function prStepStat(body){
       '<span style="text-align:center;color:#555">'+ageStr+'</span>'+
       '<div>'+'<input type="number" step="0.01" style="'+cellInput+'" value="'+val('epfEmp',b.epfEmp)+'" onchange="prSetStat('+e.id+',\'epfEmp\',this.value)">'+baseLbl(b.epfBase)+'</div>'+
       '<div>'+'<input type="number" step="0.01" style="'+cellInput+'" value="'+val('epfEr',b.epfEr)+'" onchange="prSetStat('+e.id+',\'epfEr\',this.value)">'+baseLbl(b.epfBase)+'</div>'+
-      '<div>'+'<input type="number" step="0.01" style="'+cellInput+'" value="'+val('socsoEmp',b.socsoEmp)+'" onchange="prSetStat('+e.id+',\'socsoEmp\',this.value)">'+baseLbl(b.socsoBase)+'</div>'+
+      '<div>'+'<input type="number" step="0.01" style="'+cellInput+'" value="'+val('socsoEmp',b.socsoEmp)+'" onchange="prSetStat('+e.id+',\'socsoEmp\',this.value)">'+baseLbl(b.socsoBase)+((b.socsoInvalidity>0||b.socsoNei>0)?'<div style="font-size:8px;color:#0a1f5c;text-align:right;margin-top:1px;white-space:nowrap">Inv '+fmtRM(b.socsoInvalidity)+' + NEI '+fmtRM(b.socsoNei)+'</div>':'')+'</div>'+
       '<div>'+'<input type="number" step="0.01" style="'+cellInput+'" value="'+val('socsoEr',b.socsoEr)+'" onchange="prSetStat('+e.id+',\'socsoEr\',this.value)">'+baseLbl(b.socsoBase)+'</div>'+
       '<div>'+'<input type="number" step="0.01" style="'+cellInput+'" value="'+val('eisEmp',b.eisEmp)+'" onchange="prSetStat('+e.id+',\'eisEmp\',this.value)">'+baseLbl(b.eisBase)+'</div>'+
       '<div>'+'<input type="number" step="0.01" style="'+cellInput+'" value="'+val('eisEr',b.eisEr)+'" onchange="prSetStat('+e.id+',\'eisEr\',this.value)">'+baseLbl(b.eisBase)+'</div>'+
@@ -4348,14 +4407,18 @@ function payslipHTML(r, forDownload){
       ${[
         ['KWSP', r.epfEmp+r.epfEr, r.epfEr, r.epfEmp],
         ['SOCSO', r.socsoEmp+r.socsoEr, r.socsoEr, r.socsoEmp],
+        ...((r.socsoInvalidity>0||r.socsoNei>0)?[
+          ['&nbsp;&nbsp;— Invalidity', 0, 0, r.socsoInvalidity],
+          ['&nbsp;&nbsp;— Non-Employment Injury', 0, 0, r.socsoNei],
+        ]:[]),
         ['EIS', r.eisEmp+r.eisEr, r.eisEr, r.eisEmp],
         ...(r.pcb>0?[['PCB / Income Tax', r.pcb, 0, r.pcb]]:[]),
         ...(r.extraDeduct>0?[['Other Deductions', r.extraDeduct, 0, r.extraDeduct]]:[]),
       ].map(([l,t,er,emp])=>`<tr>
-        <td style="padding:5px 10px;border-bottom:1px dotted #c5d9f1">${l}</td>
+        <td style="padding:5px 10px;border-bottom:1px dotted #c5d9f1;${l.includes('—')?'font-size:10px;color:#555;font-style:italic':''}">${l}</td>
         <td style="padding:5px 10px;border-bottom:1px dotted #c5d9f1;text-align:right">${t>0?p(t):''}</td>
         <td style="padding:5px 10px;border-bottom:1px dotted #c5d9f1;text-align:right">${er>0?p(er):''}</td>
-        <td style="padding:5px 10px;border-bottom:1px dotted #c5d9f1;text-align:right">${emp>0?p(emp):''}</td>
+        <td style="padding:5px 10px;border-bottom:1px dotted #c5d9f1;text-align:right${l.includes('—')?';font-size:10px;color:#555':''}">${emp>0?p(emp):''}</td>
       </tr>`).join('')}
       <tr style="background:#d0dff5;font-weight:700">
         <td style="padding:6px 10px;border-top:1px solid #1a3a6e">TOTAL DEDUCTION</td>
@@ -6045,7 +6108,7 @@ function tabSalary(e){
   <div class="sec-title">Statutory Contribution Settings</div>
   <p class="muted mb8" style="font-size:11px">Tick to mark as <strong>non-contributor</strong>. When ticked, that contribution is zeroed for this employee.</p>
   <div style="background:#f8f8f6;border:1px solid rgba(0,0,0,0.1);border-radius:8px;padding:12px 16px">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px">
       ${['kwsp','socso','eis'].map(k=>{
         const labels={kwsp:'KWSP / EPF',socso:'SOCSO',eis:'EIS'};
         const empKey=k+'EmpContrib'; const erKey=k+'ErContrib';
@@ -6062,6 +6125,14 @@ function tabSalary(e){
           </label>
         </div>`;
       }).join('')}
+      ${(()=>{ const neiVal=e.socsoNeiEmpContrib!==false; return `<div style="background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:6px;padding:10px 12px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:#0a1f5c">SOCSO – Non-Employment Injury</div>
+          <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer">
+            <input type="checkbox" ${!neiVal?'checked':''} onchange="uf('socsoNeiEmpContrib',!this.checked)" style="width:14px;height:14px">
+            Non-contributor (Employee)
+          </label>
+          <div style="font-size:9px;color:#888;margin-top:6px">Employer side unaffected. Invalidity portion of SOCSO still applies even if ticked.</div>
+        </div>`; })()}
     </div>
     <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.08)">
       <input type="checkbox" ${e.firstTimeContributor57?'checked':''} onchange="uf('firstTimeContributor57',this.checked)" style="width:14px;height:14px">
@@ -8624,6 +8695,7 @@ function migrationTransformEmployeeCompanies(){
         kwsp_emp_contrib:b.kwspEmpContrib!==false, kwsp_er_contrib:b.kwspErContrib!==false,
         socso_emp_contrib:b.socsoEmpContrib!==false, socso_er_contrib:b.socsoErContrib!==false,
         eis_emp_contrib:b.eisEmpContrib!==false, eis_er_contrib:b.eisErContrib!==false,
+        socso_nei_emp_contrib:b.socsoNeiEmpContrib!==false,
         salary_history:b.salaryHistory||[], allowances:b.allowances||[], other_income:b.otherIncome||[]
       });
     });
@@ -8659,7 +8731,8 @@ function migrationTransformPayslips(){
       allow_total:r.allowTotal||0, inc_total:r.incTotal||0, new_pro_adj:r.newProAdj||0, resign_adj:r.resignAdj||0,
       total_pro_adj:r.totalProAdj||0, unpaid_leave_deduction:r.unpaidLeaveDeduction||0, unpaid_leave_days:r.unpaidLeaveDays||0,
       excess_al_days:r.excessALDays||0, gross:r.gross||0, epf_emp:r.epfEmp||0, epf_er:r.epfEr||0,
-      socso_emp:r.socsoEmp||0, socso_er:r.socsoEr||0, eis_emp:r.eisEmp||0, eis_er:r.eisEr||0, pcb:r.pcb||0,
+      socso_emp:r.socsoEmp||0, socso_er:r.socsoEr||0, socso_invalidity:r.socsoInvalidity||0, socso_nei:r.socsoNei||0,
+      eis_emp:r.eisEmp||0, eis_er:r.eisEr||0, pcb:r.pcb||0,
       pcb_calc:r.pcbCalc||0, pcb_apply:!!r.pcbApply,
       stat_age:(r.statAge===''||r.statAge===undefined||r.statAge===null)?null:parseInt(r.statAge)||null,
       socso_employer_only:!!r.socsoEmployerOnly, socso_applies:r.socsoApplies!==false, eis_applies:r.eisApplies!==false,
@@ -8827,6 +8900,7 @@ function reverseEmployeeCompanyRow(b){
     kwspEmpContrib:b.kwsp_emp_contrib!==false, kwspErContrib:b.kwsp_er_contrib!==false,
     socsoEmpContrib:b.socso_emp_contrib!==false, socsoErContrib:b.socso_er_contrib!==false,
     eisEmpContrib:b.eis_emp_contrib!==false, eisErContrib:b.eis_er_contrib!==false,
+    socsoNeiEmpContrib:b.socso_nei_emp_contrib!==false,
     salaryHistory:b.salary_history||[], allowances:b.allowances||[], otherIncome:b.other_income||[]};
 }
 function reversePaymentTypeRow(p){
@@ -8850,6 +8924,7 @@ function reversePayslipRow(r){
     totalProAdj:r.total_pro_adj||0, unpaidLeaveDeduction:r.unpaid_leave_deduction||0,
     unpaidLeaveDays:r.unpaid_leave_days||0, excessALDays:r.excess_al_days||0, gross:r.gross||0,
     epfEmp:r.epf_emp||0, epfEr:r.epf_er||0, socsoEmp:r.socso_emp||0, socsoEr:r.socso_er||0,
+    socsoInvalidity:r.socso_invalidity||0, socsoNei:r.socso_nei||0,
     eisEmp:r.eis_emp||0, eisEr:r.eis_er||0, pcb:r.pcb||0, pcbCalc:r.pcb_calc||0, pcbApply:!!r.pcb_apply,
     statAge:(r.stat_age===null||r.stat_age===undefined)?'':r.stat_age,
     socsoEmployerOnly:!!r.socso_employer_only, socsoApplies:r.socso_applies!==false, eisApplies:r.eis_applies!==false,
