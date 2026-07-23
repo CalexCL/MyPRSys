@@ -325,7 +325,7 @@ input[type=file]{display:none}
       <a onclick="signOutUser()" style="cursor:pointer;color:#991b1b;font-size:9px;font-weight:600;flex-shrink:0">Sign Out</a>
     </div>
     <div>&copy; MyEden Group Sdn. Bhd.</div>
-    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.23-12:00</div>
+    <div id="app-version" style="font-family:monospace;letter-spacing:.2px">MyPRSys v2026.07.23-16:30</div>
   </div>
 </aside>
 
@@ -1640,6 +1640,7 @@ function saveDB(){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
     _saveStatusGlobal='saved';
     updateDashSaveStatus('saved', DB.lastSaved, DB.lastSaveLocation);
+    scheduleSupabaseSync();
   } catch(e){ _saveStatusGlobal='error'; updateDashSaveStatus('error'); }
 }
 function markUnsaved(){
@@ -1667,8 +1668,9 @@ function updateDashSaveStatus(state, timestamp, location){
     el.style.background='#f8f8f6'; el.style.borderColor='rgba(0,0,0,0.1)';
   }
 }
-function loadDB(){
-  // Pre-fetch: always try to restore last saved state from localStorage on startup
+async function loadDB(){
+  // Pre-fetch: always try to restore last saved state from localStorage first,
+  // so there's a working baseline even if the Supabase fetch below fails/is slow.
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){
@@ -1679,6 +1681,37 @@ function loadDB(){
       }
     }
   } catch(e){}
+
+  // Phase 3: Supabase is the primary source — try to hydrate from it and overwrite
+  // the local baseline above. Falls back to whatever localStorage gave us if the
+  // fetch fails, is disabled, or (defensively) comes back completely empty.
+  if(supabaseSyncEnabled()){
+    try{
+      updateDashSaveStatus('saving');
+      const remote = await supabaseLoadAll();
+      if(remote){
+        DB.companies = remote.companies;
+        DB.employees = remote.employees;
+        if(!DB.settings) DB.settings={};
+        if(remote.paymentTypes.length) DB.settings.paymentTypes = remote.paymentTypes;
+        if(remote.ot) DB.settings.ot = remote.ot;
+        DB.payslips = remote.payslips;
+        DB.nextId = DB.employees.length ? Math.max(...DB.employees.map(e=>e.id))+1 : 1;
+        DB.nextCompanyId = DB.companies.length ? Math.max(...DB.companies.map(c=>c.id))+1 : 1;
+        if(!DB.activeCompanyId || !DB.companies.find(c=>c.id===DB.activeCompanyId)){
+          DB.activeCompanyId = (DB.companies.find(c=>c.isDefault)||DB.companies[0]||{}).id || 1;
+        }
+        DB.lastSaveLocation='Supabase';
+        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); }catch(e){}
+      } else {
+        console.warn('Supabase returned no companies/employees — using local cache instead.');
+      }
+    }catch(err){
+      console.warn('Supabase load failed, using local cache:', err.message);
+      toast('Could not reach Supabase — showing your last locally saved data.','warn');
+    }
+  }
+
   // Ensure all required fields exist (safe migration)
   if(!DB.employees) DB.employees=[];
   if(!DB.backupHistory) DB.backupHistory=[];
@@ -1687,14 +1720,15 @@ function loadDB(){
   ensureSettings();
 
   // ═══════════════════════════════════════════════════════════
-  // MULTI-COMPANY MIGRATION (Phase 1)
+  // MULTI-COMPANY MIGRATION (Phase 1) — safety net for any records that
+  // still don't have companies[] blocks (e.g. very old localStorage-only data)
   // ═══════════════════════════════════════════════════════════
   migrateToMultiCompany();
 
   DB.hasUnsaved=false;
   // Update save status after a tick (DOM may not exist yet)
   setTimeout(()=>{
-    if(DB.lastSaved){
+    if(DB.lastSaved || DB.lastSaveLocation==='Supabase'){
       updateDashSaveStatus('saved', DB.lastSaved, DB.lastSaveLocation);
     } else {
       updateDashSaveStatus('none');
@@ -2348,6 +2382,21 @@ function renderSettings(){
 
   c.innerHTML=
   '<div style="padding:18px 22px;max-width:960px">'
+
+  // ── Data Sync (Phase 3) ──
+  +'<div class="pr-section" style="margin-bottom:18px">'
+    +'<div style="padding:12px 16px;border-bottom:1px solid rgba(0,0,0,0.08)"><strong style="font-size:13px">Data Sync — Supabase</strong>'
+    +'<div class="muted" style="font-size:11px;margin-top:2px">This device loads and saves data directly to Supabase, so everyone always sees the same up-to-date records. A local copy is kept automatically as a fallback if the connection drops.</div></div>'
+    +'<div style="padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
+      +'<span style="font-size:12px">Status: <strong id="sync-status-label">'+(supabaseSyncEnabled()?'Supabase sync enabled':'Local-only mode')+'</strong></span>'
+      +(currentProfile&&currentProfile.role==='admin'
+        ? '<button class="btn btn-sm" onclick="toggleSupabaseSyncPref()">'+(supabaseSyncEnabled()?'Switch to local-only (troubleshooting)':'Re-enable Supabase sync')+'</button>'
+        : '')
+    +'</div>'
+    +(currentProfile&&currentProfile.role==='admin'
+      ? '<div style="padding:0 16px 14px;font-size:11px;color:#92400e">Local-only mode is for troubleshooting only — changes made in this mode stay on this device until you switch sync back on. Use it only if Supabase is having an outage.</div>'
+      : '')
+  +'</div>'
 
   // ── OT Calculation Method ──
   +'<div class="pr-section" style="margin-bottom:18px">'
@@ -8302,8 +8351,8 @@ function handleXLSFile(input){
   const f=input.files[0]; if(f) processXLSFile(f); input.value='';
 }
 
-function bootPayFlowApp(){
-  loadDB();
+async function bootPayFlowApp(){
+  await loadDB();
 
   if(!DB.employees.length){
     DB.employees=[
@@ -8454,7 +8503,7 @@ async function handleSessionChange(){
   document.getElementById('main-app-shell').style.display='flex';
   const emailEl=document.getElementById('auth-user-email');
   if(emailEl) emailEl.textContent=profile.email+(profile.role==='admin'?' · admin':'');
-  bootPayFlowApp();
+  await bootPayFlowApp();
 }
 
 function applyPermissionsToUI(){
@@ -8724,6 +8773,159 @@ async function startMigration(){
     toast('Migration failed: '+err.message,'error');
   }finally{
     btn.disabled=false; btn.textContent='Push to Supabase';
+  }
+}
+
+// ════════════════════════════════════════════
+//  PHASE 3 — SUPABASE AS PRIMARY READ/WRITE PATH
+//  Load hydrates DB from Supabase (reversing the migration transform);
+//  Save pushes DB to Supabase (reusing the migration transform), debounced.
+//  localStorage stays as an offline read/write cache + fallback.
+// ════════════════════════════════════════════
+const SUPABASE_SYNC_PREF_KEY = 'payflow_supabase_sync_enabled';
+function supabaseSyncEnabled(){
+  try{ const v=localStorage.getItem(SUPABASE_SYNC_PREF_KEY); return v===null ? true : v==='1'; }
+  catch(e){ return true; }
+}
+function setSupabaseSyncEnabled(on){
+  try{ localStorage.setItem(SUPABASE_SYNC_PREF_KEY, on?'1':'0'); }catch(e){}
+}
+function toggleSupabaseSyncPref(){
+  const next=!supabaseSyncEnabled();
+  setSupabaseSyncEnabled(next);
+  toast(next ? 'Supabase sync re-enabled — changes will sync on next save.' : 'Switched to local-only mode. Data will only save on this device until sync is re-enabled.', next?'ok':'warn');
+  renderSettings();
+}
+
+// ── Reverse transforms: Supabase row(s) → local DB shape ──
+function reverseCompanyRow(c){
+  return {id:c.id, isDefault:!!c.is_default, name:c.name||'', shortName:c.short_name||'',
+    regNo:c.reg_no||'', tagline:c.tagline||'', epfNo:c.epf_no||'', socsoNoEmployer:c.socso_no_employer||'',
+    address:c.address||'', logo:c.logo||''};
+}
+function reverseEmployeeRow(e){
+  return {id:e.id, name:e.name||'', chineseName:e.chinese_name||'', nric:e.nric||'', dob:e.dob||'',
+    age:(e.age===null||e.age===undefined)?'':e.age, nationality:e.nationality||'', race:e.race||'',
+    gender:e.gender||'M', address:e.address||'', contacts:e.contacts||[], email:e.email||'',
+    maritalStatus:e.marital_status||'', spouseName:e.spouse_name||'', empId:e.emp_id||'',
+    autoId:e.auto_id||'Y', company:e.company||'', firstTimeContributor57:!!e.first_time_contributor_57,
+    annualLeave:e.annual_leave||{given:0,bf:0,kpi:'UQ',usedMonth:0,usedToDate:0},
+    replacementLeave:e.replacement_leave||{given:0,usedMonth:0,usedToDate:0},
+    sickLeave:e.sick_leave||{given:14,usedMonth:0,usedToDate:0},
+    unpaidLeave:e.unpaid_leave||{taken:0,usedToDate:0},
+    otherLeaves:e.other_leaves||[], companies:[]};
+}
+function reverseEmployeeCompanyRow(b){
+  return {companyId:b.company_id, primary:!!b.is_primary, dept:b.dept||'', jobTitle:b.job_title||'',
+    empType:b.emp_type||'FT', dateJoined:b.date_joined||'', confirmStatus:b.confirm_status||'UP',
+    confirmedDate:b.confirmed_date||'', resignLetterDate:b.resign_letter_date||'',
+    noticeDays:b.notice_days||30, noticePeriodEndDate:b.notice_period_end_date||'',
+    resignedDate:b.resigned_date||'', workFrom:b.work_from||'08:00', workTo:b.work_to||'17:00',
+    mealDuration:b.meal_duration||60, otDays:b.ot_days||26,
+    bankName:b.bank_name||'', bankAccount:b.bank_account||'', kwspNo:b.kwsp_no||'',
+    socsoNo:b.socso_no||'', tinNo:b.tin_no||'',
+    kwspEmpContrib:b.kwsp_emp_contrib!==false, kwspErContrib:b.kwsp_er_contrib!==false,
+    socsoEmpContrib:b.socso_emp_contrib!==false, socsoErContrib:b.socso_er_contrib!==false,
+    eisEmpContrib:b.eis_emp_contrib!==false, eisErContrib:b.eis_er_contrib!==false,
+    salaryHistory:b.salary_history||[], allowances:b.allowances||[], otherIncome:b.other_income||[]};
+}
+function reversePaymentTypeRow(p){
+  return {id:p.id, key:p.key||undefined, name:p.name||'', category:p.category||'Other',
+    epfExempt:!!p.epf_exempt, socsoExempt:!!p.socso_exempt, eisExempt:!!p.eis_exempt, pcbExempt:!!p.pcb_exempt};
+}
+function reverseOtSettingsRow(o){
+  return {divisorDays:o.divisor_days||26, divisorHours:o.divisor_hours||8,
+    multNormal:o.mult_normal||1.5, multRest:o.mult_rest||2.0, multPH:o.mult_ph||3.0};
+}
+function reversePayslipRow(r){
+  return {empId:r.emp_id||'', empName:r.emp_name||'', dept:r.dept||'', jobTitle:r.job_title||'',
+    company:r.company||'', companyId:r.company_id||null, companyName:r.company_name||'',
+    period:r.period||'', salCode:r.sal_code||'', isHourly:!!r.is_hourly, hourlyLabel:r.hourly_label||'',
+    basic:r.basic||0, basicBeforeProrate:r.basic_before_prorate||0, ptHours:r.pt_hours||0,
+    otHours:r.ot_hours||0, otPay:r.ot_pay||0, otNormalHrs:r.ot_normal_hrs||0, otRestHrs:r.ot_rest_hrs||0,
+    otPHHrs:r.ot_ph_hrs||0, otPayN:r.ot_pay_n||0, otPayR:r.ot_pay_r||0, otPayP:r.ot_pay_p||0, otRate:r.ot_rate||0,
+    alBuybackDays:r.al_buyback_days||0, alBuybackAmt:r.al_buyback_amt||0, alBuybackDaily:r.al_buyback_daily||0,
+    epfBase:r.epf_base||0, socsoBase:r.socso_base||0, eisBase:r.eis_base||0, pcbBase:r.pcb_base||0,
+    allowTotal:r.allow_total||0, incTotal:r.inc_total||0, newProAdj:r.new_pro_adj||0, resignAdj:r.resign_adj||0,
+    totalProAdj:r.total_pro_adj||0, unpaidLeaveDeduction:r.unpaid_leave_deduction||0,
+    unpaidLeaveDays:r.unpaid_leave_days||0, excessALDays:r.excess_al_days||0, gross:r.gross||0,
+    epfEmp:r.epf_emp||0, epfEr:r.epf_er||0, socsoEmp:r.socso_emp||0, socsoEr:r.socso_er||0,
+    eisEmp:r.eis_emp||0, eisEr:r.eis_er||0, pcb:r.pcb||0, pcbCalc:r.pcb_calc||0, pcbApply:!!r.pcb_apply,
+    statAge:(r.stat_age===null||r.stat_age===undefined)?'':r.stat_age,
+    socsoEmployerOnly:!!r.socso_employer_only, socsoApplies:r.socso_applies!==false, eisApplies:r.eis_applies!==false,
+    extraDeduct:r.extra_deduct||0, totalDeduct:r.total_deduct||0, netPay:r.net_pay||0,
+    leaveEntries:r.leave_entries||{}, nric:r.nric||'', bankName:r.bank_name||'', bankAccount:r.bank_account||'',
+    status:r.status||'Draft', approvedAt:r.approved_at||''};
+}
+
+// Fetch everything from Supabase and assemble it into the app's normal DB shape.
+// Returns null (caller should fall back to localStorage) if the read fails or comes back empty.
+async function supabaseLoadAll(){
+  const [compRes, empRes, ecRes, ptRes, otRes, psRes] = await Promise.all([
+    sb.from('companies').select('*'),
+    sb.from('employees').select('*'),
+    sb.from('employee_companies').select('*'),
+    sb.from('payment_types').select('*'),
+    sb.from('ot_settings').select('*').eq('id',1).maybeSingle(),
+    sb.from('payslips').select('*'),
+  ]);
+  if(compRes.error) throw new Error('companies: '+compRes.error.message);
+  if(empRes.error) throw new Error('employees: '+empRes.error.message);
+  if(ecRes.error) throw new Error('employee_companies: '+ecRes.error.message);
+
+  const companies=(compRes.data||[]).map(reverseCompanyRow);
+  const employees=(empRes.data||[]).map(reverseEmployeeRow);
+  const empById={}; employees.forEach(e=>{ empById[e.id]=e; });
+  (ecRes.data||[]).forEach(row=>{
+    const emp=empById[row.employee_id];
+    if(emp) emp.companies.push(reverseEmployeeCompanyRow(row));
+  });
+  // Mirror each employee's primary company block onto their flat legacy fields
+  // (many screens still read e.g. e.dept / e.dateJoined directly).
+  employees.forEach(e=>{
+    const primary=e.companies.find(b=>b.primary)||e.companies[0];
+    if(primary) COMPANY_BLOCK_FIELDS.forEach(f=>{ if(primary[f]!==undefined) e[f]=primary[f]; });
+  });
+
+  const paymentTypes = ptRes.error ? [] : (ptRes.data||[]).map(reversePaymentTypeRow);
+  const ot = (otRes && !otRes.error && otRes.data) ? reverseOtSettingsRow(otRes.data) : null;
+  const payslips = psRes.error ? [] : (psRes.data||[]).map(reversePayslipRow);
+
+  if(companies.length===0 && employees.length===0) return null; // nothing there yet — don't wipe local data
+
+  return {companies, employees, paymentTypes, ot, payslips};
+}
+
+// Push the current in-memory DB to Supabase, reusing the exact transform functions
+// the migration tool already uses and that are covered by the vm test suite.
+let _supabaseSyncTimer=null, _supabaseSyncInFlight=false, _supabaseSyncQueued=false;
+function scheduleSupabaseSync(){
+  if(!supabaseSyncEnabled()) return;
+  clearTimeout(_supabaseSyncTimer);
+  _supabaseSyncTimer=setTimeout(()=>{ syncToSupabase(); }, 600);
+}
+async function syncToSupabase(){
+  if(!supabaseSyncEnabled()) return;
+  if(_supabaseSyncInFlight){ _supabaseSyncQueued=true; return; }
+  _supabaseSyncInFlight=true;
+  updateDashSaveStatus('saving');
+  try{
+    await migrationPushTable('companies', migrationTransformCompanies(), 'id');
+    await migrationPushTable('employees', migrationTransformEmployees(), 'id');
+    await migrationPushTable('employee_companies', migrationTransformEmployeeCompanies(), 'employee_id,company_id');
+    await migrationPushTable('payment_types', migrationTransformPaymentTypes(), 'id');
+    await migrationPushTable('ot_settings', [migrationTransformOtSettings()], 'id');
+    await migrationPushTable('payslips', migrationTransformPayslips(), 'emp_id,period');
+    DB.lastSaved=fmtNow(); DB.lastSaveLocation='Supabase';
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); }catch(e){}
+    updateDashSaveStatus('saved', DB.lastSaved, DB.lastSaveLocation);
+  }catch(err){
+    console.warn('Supabase sync failed, changes are still saved locally:', err.message);
+    updateDashSaveStatus('error');
+    toast('Could not sync to Supabase — saved locally only. Will retry on next change.','warn');
+  }finally{
+    _supabaseSyncInFlight=false;
+    if(_supabaseSyncQueued){ _supabaseSyncQueued=false; syncToSupabase(); }
   }
 }
 
